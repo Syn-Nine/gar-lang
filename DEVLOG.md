@@ -109,9 +109,9 @@ This update adds literals for true and false, as well as strings. Strings get st
 
 Screenshot of boolean logic:
 
-![t+20h screenshot logic](https://github.com/Syn-Nine/gar-lang/blob/T+14h/images/t+20h_logic.png?raw=true)
+![t+20h screenshot logic](https://github.com/Syn-Nine/gar-lang/blob/T+20h/images/t+20h_logic.png?raw=true)
 
 Screenshot of static string references:
 
-![t+20h screenshot strings](https://github.com/Syn-Nine/gar-lang/blob/T+14h/images/t+20h_str.png?raw=true)
+![t+20h screenshot strings](https://github.com/Syn-Nine/gar-lang/blob/T+20h/images/t+20h_str.png?raw=true)
 

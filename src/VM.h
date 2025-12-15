@@ -11,13 +11,16 @@
 #define PARAM_PTR m_memory.param_ptr
 #define INST_PTR m_memory.inst_ptr
 
+class Environment;
+
 class VM
 {
 public:
-    VM(TokenList bytecode, ErrorHandler* errorHandler)
+    VM(TokenList bytecode, Environment* environment, ErrorHandler* errorHandler)
     {
         m_bytecode = bytecode;
         m_errorHandler = errorHandler;
+        m_env = environment;
     }
 
     void Assemble();
@@ -66,6 +69,12 @@ private:
     {
         m_memory.block[INST_PTR] = inst;
         INST_PTR++;
+    }
+
+    void PushInstBool(bool val)
+    {
+        if (val) { m_memory.block[INST_PTR++] = 1; }
+        else { m_memory.block[INST_PTR++] = 0; }
     }
 
     void PushInstInt16(int val)
@@ -117,6 +126,13 @@ private:
         return m_memory.block[PARAM_PTR--];
     }
 
+    bool PopParamBool()
+    {
+        int val = m_memory.block[PARAM_PTR--];
+        if (1 == val) return true;
+        return false;
+    }
+
     int PopParamInt()
     {
         uint8_t* data = m_memory.block;
@@ -132,6 +148,13 @@ private:
     void PushParamType(uint8_t type)
     {
         m_memory.block[++PARAM_PTR] = type;
+    }
+
+    void PushParamBool(bool val)
+    {
+        if (val) { m_memory.block[++PARAM_PTR] = 1; }
+        else { m_memory.block[++PARAM_PTR] = 0; }
+        PushParamType(PARAM_BOOL);
     }
 
     void PushParamFloat(float fval)
@@ -164,6 +187,25 @@ private:
         PushParamType(PARAM_INT);
     }
 
+    void PushParamVar(int idx)
+    {
+        m_memory.block[++PARAM_PTR] = m_memory.block[MEM_START_VARS + idx + 4];
+        m_memory.block[++PARAM_PTR] = m_memory.block[MEM_START_VARS + idx + 3];
+        m_memory.block[++PARAM_PTR] = m_memory.block[MEM_START_VARS + idx + 2];
+        m_memory.block[++PARAM_PTR] = m_memory.block[MEM_START_VARS + idx + 1];
+        m_memory.block[++PARAM_PTR] = m_memory.block[MEM_START_VARS + idx + 0];
+    }
+
+    void PopParamVar(int idx)
+    {
+        m_memory.block[MEM_START_VARS + idx + 0] = m_memory.block[PARAM_PTR--];
+        m_memory.block[MEM_START_VARS + idx + 1] = m_memory.block[PARAM_PTR--];
+        m_memory.block[MEM_START_VARS + idx + 2] = m_memory.block[PARAM_PTR--];
+        m_memory.block[MEM_START_VARS + idx + 3] = m_memory.block[PARAM_PTR--];
+        m_memory.block[MEM_START_VARS + idx + 4] = m_memory.block[PARAM_PTR--];
+    }
+
+
     void StartComment(std::string& row)
     {
         int pad = 32 - row.length();
@@ -184,10 +226,21 @@ private:
     }
 
     // Executive
+    void LoadBool();
     void LoadInt();
     void LoadFloat();
+    void LoadString();
+    void LoadVar();
+    void StoreVar();
     void PushParamInst4();
     void BinaryOp(TokenTypeEnum oper);
+    void AndOr(TokenTypeEnum oper);
+    void ComparisonOp(TokenTypeEnum oper);
+    void Negate();
+    void Invert();
+    void Print(bool newline);
+    void IfJmp();
+    void Jmp();
     
     //
 
@@ -216,9 +269,18 @@ private:
 
     TokenList m_bytecode;
     ErrorHandler* m_errorHandler;
+    Environment* m_env;
     Memory m_memory;
     std::string m_asm;
 
+    struct pp_jmps_s
+    {
+        std::string to_label;
+        size_t from_inst;
+    };
+
+    std::vector<pp_jmps_s> m_pp_jmps;
+    std::map<std::string, size_t> m_pp_labels;
 
 };
 
