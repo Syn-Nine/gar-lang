@@ -90,3 +90,7 @@ grouping using ()
 
 This point marks 3 hours into the jam.
 
+## T+7h: Compute shader prototype
+I have a prototype that uses GLSL 4.3 with raylib to put a value in an SSBO, increment the value on a compute shader, and use the value in the fragment shader to control rendering. This is effectively a one bytecode machine proof of concept.
+
+I'm going to hold off on posting the code for this until I get the CPU based VM working just in case I have to cut this from the project.
