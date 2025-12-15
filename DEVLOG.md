@@ -101,5 +101,17 @@ I have a simple compiler and VM running on the CPU that can compile math express
 The lexer was pulled directly from my [Tentacode](https://github.com/Syn-Nine/tentacode/tree/llvm) language to save time. The lexer and compiler are both based on the wonderful book [Crafting Interpreters](https://craftinginterpreters.com/). The file gar.cpp has the main() function which loads a source file, scans it for tokens using the Scanner class, compiles it using the Compiler class, then assembles and runs using the VM class. Expressions pop and push values to the parameter stack like in FORTH. At the end of execution, the VM shows the state of the parameter stack to confirm if the math expressions worked correctly.
 
 Here's a screenshot of the output so far:
+
 ![t+14h screenshot](https://github.com/Syn-Nine/gar-lang/blob/T+14h/images/t+14h.png?raw=true)
+
+## T+20h: Strings, Printing, Booling Logic, Variables
+This update adds literals for true and false, as well as strings. Strings get stored in a static memory block during assembly. When pushed to the parameter stack the parameter holds the address to the static memory location. At this location is the length of the string and the string bytes in ascii. I've also started an Environment class to hold onto variable information during compiling so that the compiler can check if a variable exists before assignment and determine which location in the variable stack to store and load values from. These values can also be pushed/popped from the parameter stack and used in boolean logic expressions. If/else blocks are now supported with jump statements in the assembly based on the conditions. The comparison/and/or operators work like in FORTH where they pop two values from the parameter stack and push a boolean back to the parameter stack representing true or false. This boolean is then consumed using the if-jump bytecode.
+
+Screenshot of boolean logic:
+
+![t+20h screenshot logic](https://github.com/Syn-Nine/gar-lang/blob/T+20h/images/t+20h_logic.png?raw=true)
+
+Screenshot of static string references:
+
+![t+20h screenshot strings](https://github.com/Syn-Nine/gar-lang/blob/T+20h/images/t+20h_str.png?raw=true)
 

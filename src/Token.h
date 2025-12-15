@@ -22,12 +22,23 @@ enum TokenTypeEnum
     TOKEN_EQUAL,
     TOKEN_LEFT_PAREN,
     TOKEN_RIGHT_PAREN,
+    TOKEN_LEFT_BRACE,
+    TOKEN_RIGHT_BRACE,
 
     /*TOKEN_COLON,
     TOKEN_SEMI_COLON,
     TOKEN_APOSTROPHE,
     */
 
+    // two character tokens
+    TOKEN_BANG_EQUAL,
+    TOKEN_EQUAL_EQUAL,
+    TOKEN_GREATER,
+    TOKEN_GREATER_EQUAL,
+    TOKEN_LESS,
+    TOKEN_LESS_EQUAL,
+    TOKEN_OR,
+    TOKEN_AND,
 
     /*TOKEN_AT,
     TOKEN_AT_AT,
@@ -48,7 +59,15 @@ enum TokenTypeEnum
     TOKEN_FLOAT,
 
     // keywords
+    TOKEN_TRUE,
+    TOKEN_FALSE,
     TOKEN_PI,
+    //
+    TOKEN_IF,
+    TOKEN_ELSE,
+    TOKEN_PRINT,
+    TOKEN_PRINTLN,
+    TOKEN_VAR,
 
     /*
     TOKEN_ABS,
@@ -97,8 +116,19 @@ enum TokenTypeEnum
 
     // low level language tokens
     // ------------------------------------------------------------------------
+    TOKEN_LABEL,
+    TOKEN_LOAD_BOOL,
     TOKEN_LOAD_FLOAT,
     TOKEN_LOAD_INT,
+    TOKEN_LOAD_VAR,
+    TOKEN_LOAD_STRING,
+    TOKEN_INV,
+    TOKEN_JMP,
+    TOKEN_NEG,
+    TOKEN_STORE_VAR,
+
+
+    TOKEN_NOOP,
     TOKEN_LN,
     
     //
@@ -199,6 +229,24 @@ static void Push(Bytecode& lhs, Token rhs)
 static void PushLn(Bytecode& lhs)
 {
     Push(lhs, Token(TOKEN_LN, 0, ""));
+}
+
+static void PushJmp(Bytecode& lhs, std::string label)
+{
+    Push(lhs, Token(TOKEN_JMP, 0, ""));
+    Push(lhs, Token(TOKEN_IDENTIFIER, label, 0, ""));
+    PushLn(lhs);
+}
+
+static void PushLabel(Bytecode& lhs, std::string label)
+{
+    Push(lhs, Token(TOKEN_LABEL, label, 0, ""));
+    PushLn(lhs);
+}
+
+static void PushNoop(Bytecode& lhs)
+{
+    Push(lhs, Token(TOKEN_NOOP, 0, ""));
 }
 
 #endif // TOKEN_H

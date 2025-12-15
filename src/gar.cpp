@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include "ErrorHandler.h"
+#include "Environment.h"
 #include "Scanner.h"
 #include "Token.h"
 #include "Compiler.h"
@@ -34,7 +35,8 @@ int main()
     //printf("%s:\n%s\n\n", filename, Token::Dump(tokens).c_str());
     printf("Input:\n%s\n\n", code);
 
-    Compiler compiler(tokens, errorHandler);
+    Environment* env = new Environment();
+    Compiler compiler(tokens, env, errorHandler);
     TokenList bytecode = compiler.Compile();
     if (errorHandler->HasErrors()) {
         printf("Compiler Error:\n");
@@ -45,7 +47,7 @@ int main()
     
     //printf("Compiler Output:\n%s\n\n", Token::Dump(bytecode).c_str());
 
-    VM vm(bytecode, errorHandler);
+    VM vm(bytecode, env, errorHandler);
     vm.Assemble();
     printf("Assembler Output:\n%s\n", vm.Dump().c_str());
     if (errorHandler->HasErrors()) {

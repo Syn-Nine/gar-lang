@@ -22,7 +22,18 @@ void Token::Initialize()
     MapTokenLex(TOKEN_EQUAL, "=");
     MapTokenLex(TOKEN_LEFT_PAREN, "(");
     MapTokenLex(TOKEN_RIGHT_PAREN, ")");
+    MapTokenLex(TOKEN_LEFT_BRACE, "{");
+    MapTokenLex(TOKEN_RIGHT_BRACE, "}");
 
+    // two character tokens
+    MapTokenLex(TOKEN_BANG_EQUAL, "!=");
+    MapTokenLex(TOKEN_EQUAL_EQUAL, "==");
+    MapTokenLex(TOKEN_GREATER, ">");
+    MapTokenLex(TOKEN_GREATER_EQUAL, ">=");
+    MapTokenLex(TOKEN_LESS, "<");
+    MapTokenLex(TOKEN_LESS_EQUAL, "<=");
+    MapTokenLex(TOKEN_AND, "&&");
+    MapTokenLex(TOKEN_OR, "||");
     
     // literals
     MapTokenLex(TOKEN_IDENTIFIER, "");
@@ -49,7 +60,16 @@ void Token::Initialize()
     */
     
     // keywords
+    MapTokenLex(TOKEN_TRUE, "true");
+    MapTokenLex(TOKEN_FALSE, "false");
+    //
     MapTokenLex(TOKEN_PI, "pi");
+    //
+    MapTokenLex(TOKEN_IF, "if");
+    MapTokenLex(TOKEN_ELSE, "else");
+    MapTokenLex(TOKEN_PRINT, "print");
+    MapTokenLex(TOKEN_PRINTLN, "println");
+    MapTokenLex(TOKEN_VAR, "var");
 
     /*
     MapTokenLex(TOKEN_ABS, "abs");
@@ -139,8 +159,18 @@ void Token::Initialize()
 
 
     // low level language tokens
+    MapTokenLex(TOKEN_LABEL, "label");
+    MapTokenLex(TOKEN_LOAD_BOOL, "loadb");
     MapTokenLex(TOKEN_LOAD_FLOAT, "loadf");
     MapTokenLex(TOKEN_LOAD_INT, "loadi");
+    MapTokenLex(TOKEN_LOAD_VAR, "loadvar");
+    MapTokenLex(TOKEN_LOAD_STRING, "loadstr");
+    MapTokenLex(TOKEN_INV, "inv");
+    MapTokenLex(TOKEN_JMP, "jmp");
+    MapTokenLex(TOKEN_NEG, "neg");
+    MapTokenLex(TOKEN_STORE_VAR, "storevar");
+    
+    MapTokenLex(TOKEN_NOOP, "noop");
     MapTokenLex(TOKEN_LN, "\n");
 
     //

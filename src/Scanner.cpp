@@ -185,6 +185,8 @@ void Scanner::ScanToken()
 	case '\'': AddToken(TOKEN_APOSTROPHE); break;*/
 	case '(': AddToken(TOKEN_LEFT_PAREN); break;
 	case ')': AddToken(TOKEN_RIGHT_PAREN); break;
+    case '{': AddToken(TOKEN_LEFT_BRACE); break;
+    case '}': AddToken(TOKEN_RIGHT_BRACE); break;
     case '^': AddToken(TOKEN_HAT); break;
     case '%': AddToken(TOKEN_PERCENT); break;
     case '+': AddToken(TOKEN_PLUS); break;
@@ -201,6 +203,13 @@ void Scanner::ScanToken()
 		}
 		break;
 
+	// two character tokens
+	case '=': AddToken(Match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL); break;
+    case '!': AddToken(Match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG); break;
+    case '>': AddToken(Match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER); break;
+    case '<': AddToken(Match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS); break;
+    case '&': Match('&') ? AddToken(TOKEN_AND) : m_errorHandler->Error(m_filename, m_line, unexpected_character); break;
+    case '|': Match('|') ? AddToken(TOKEN_OR) : m_errorHandler->Error(m_filename, m_line, unexpected_character); break;
 
 	// comments or divide
 	case '/':
