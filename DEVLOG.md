@@ -94,3 +94,11 @@ This point marks 3 hours into the jam.
 I have a prototype that uses GLSL 4.3 with raylib to put a value in an SSBO, increment the value on a compute shader, and use the value in the fragment shader to control rendering. This is effectively a one bytecode machine proof of concept.
 
 I'm going to hold off on posting the code for this until I get the CPU based VM working just in case I have to cut this from the project.
+
+## T+14h: Start of compiler and VM
+I have a simple compiler and VM running on the CPU that can compile math expressions into bytecodes and execute them using a parameter stack. The VM basically has a big memory arena as a surrogate for the SSBO that I'm packing and unpacking bytes from. The plan is for the arena to contain parameter, return, and variable stacks, as well as the instructions and pointers for each.
+
+The lexer was pulled directly from my [Tentacode](https://github.com/Syn-Nine/tentacode/tree/llvm) language to save time. The lexer and compiler are both based on the wonderful book [Crafting Interpreters](https://craftinginterpreters.com/). The file gar.cpp has the main() function which loads a source file, scans it for tokens using the Scanner class, compiles it using the Compiler class, then assembles and runs using the VM class. Expressions pop and push values to the parameter stack like in FORTH. At the end of execution, the VM shows the state of the parameter stack to confirm if the math expressions worked correctly.
+
+Here's a screenshot of the output so far:
+![t+14h screenshot](/images/t+14h.png)
