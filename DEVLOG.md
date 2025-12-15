@@ -1,5 +1,5 @@
 ## T+3h: Scope
-This project is for [Langjam Gamejam 2025](https://langjamgamejam.com/) where you program a custom language and make a game in that language in 7 days. Due to work/school commitments I started the weekend before and am logging my hours here to keep with the spirit of the jam. 
+This project is for [Langjam Gamejam 2025](https://langjamgamejam.com/) where you program a custom language and make a game in that language in 7 days. Due to work/school commitments I started the weekend before and am logging my hours here to keep with the spirit of the jam. I'm also planning to create branches at hour milestones to keep track of what the code looked like along the way.
 
 First things first, I need to come up with a plan of attack, primarily high level scoping decisions that have large impact on success and schedule.
 
