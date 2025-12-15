@@ -101,4 +101,5 @@ I have a simple compiler and VM running on the CPU that can compile math express
 The lexer was pulled directly from my [Tentacode](https://github.com/Syn-Nine/tentacode/tree/llvm) language to save time. The lexer and compiler are both based on the wonderful book [Crafting Interpreters](https://craftinginterpreters.com/). The file gar.cpp has the main() function which loads a source file, scans it for tokens using the Scanner class, compiles it using the Compiler class, then assembles and runs using the VM class. Expressions pop and push values to the parameter stack like in FORTH. At the end of execution, the VM shows the state of the parameter stack to confirm if the math expressions worked correctly.
 
 Here's a screenshot of the output so far:
-![t+14h screenshot](/images/t+14h.png)
+![t+14h screenshot](https://github.com/Syn-Nine/gar-lang/blob/T+14h/images/t+14h.png?raw=true)
+
