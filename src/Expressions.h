@@ -9,15 +9,15 @@ class Environment;
 class Expr
 {
 public:
-    static Bytecode AsExpr(Bytecode lhs, Token oper);
-    static Bytecode AssignExpr(Token id, Bytecode rhs, Environment* env);
-    static Bytecode BinaryExpr(Bytecode lhs, Token oper, Bytecode rhs);
-    static Bytecode CallExpr(Bytecode params, Token callee);
-    static Bytecode LiteralExpr(Token prev);
-    static Bytecode LiteralExpr(Token prev, std::string value, Environment* env);
-    static Bytecode LogicalExpr(Bytecode lhs, Token oper, Bytecode rhs);
-    static Bytecode UnaryExpr(Token oper, Bytecode rhs);
-    static Bytecode VariableExpr(Token id, Environment* env);
+    static IRCode AsExpr(IRCode lhs, Token oper);
+    static IRCode AssignExpr(Token id, IRCode rhs, Environment* env);
+    static IRCode BinaryExpr(IRCode lhs, Token oper, IRCode rhs);
+    static IRCode CallExpr(IRCode params, Token callee);
+    static IRCode LiteralExpr(Token prev);
+    static IRCode LiteralExpr(Token prev, std::string value, Environment* env);
+    static IRCode LogicalExpr(IRCode lhs, Token oper, IRCode rhs);
+    static IRCode UnaryExpr(Token oper, IRCode rhs);
+    static IRCode VariableExpr(Token id, Environment* env);
 
 private:
 

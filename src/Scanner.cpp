@@ -48,6 +48,17 @@ char Scanner::Advance()
 	return m_buffer[m_current - 1];
 }
 
+void Scanner::Enum()
+{
+    while (IsAlphaNumeric(Peek())) { Advance(); }
+
+    std::string text = m_buffer.substr(m_start, m_current - m_start);
+
+    TokenTypeEnum type = TOKEN_ENUM;
+
+    AddToken(type);
+}
+
 void Scanner::Identifier()
 {
 	while (true)
@@ -180,13 +191,25 @@ void Scanner::ScanToken()
 	switch (c)
 	{
 	// single character tokens
-	//case ':': AddToken(TOKEN_COLON); break;
-	case ';': /* ignore */ break;
+	case ':':
+        if (IsAlpha(Peek()))
+        {
+            Enum();
+        }
+        else
+        {
+            m_errorHandler->Error(m_filename, m_line, unexpected_character);
+        }
+        break;
+    
+    case ';': /* ignore */ break;
 	case ',': AddToken(TOKEN_COMMA); break;
 	case '(': AddToken(TOKEN_LEFT_PAREN); break;
 	case ')': AddToken(TOKEN_RIGHT_PAREN); break;
     case '{': AddToken(TOKEN_LEFT_BRACE); break;
     case '}': AddToken(TOKEN_RIGHT_BRACE); break;
+    case '[': AddToken(TOKEN_LEFT_BRACKET); break;
+    case ']': AddToken(TOKEN_RIGHT_BRACKET); break;
     case '^': AddToken(TOKEN_HAT); break;
     case '%': AddToken(TOKEN_PERCENT); break;
     case '+': AddToken(TOKEN_PLUS); break;

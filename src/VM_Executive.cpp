@@ -2,26 +2,40 @@
 
 #include <stdexcept>
 
-void VM::Execute()
+VM* VM::m_instance = nullptr;
+
+void VM::Execute(uint8_t* bytecode)
 {
+    // load bytecode into VM memory
+    memcpy(m_memory.block, bytecode, MEM_BLOCK_SZ);
+
     INST_PTR = 0;
     PARAM_PTR = MEM_PARAM_START;
-    RET_PTR = MEM_RET_START;
+    FRAME_BASE_PTR = MEM_BLOCK_SZ - 1;
+    FRAME_PTR = FRAME_BASE_PTR;
+    BLOCK_BASE_PTR = FRAME_PTR;
 
+    //
+    
     m_memory.block[PARAM_PTR] = PARAM_INVALID;
 
     printf("Executing...\n");
     bool quit = false;
-
+    
     while (true)
     {
         TokenTypeEnum inst = (TokenTypeEnum)m_memory.block[INST_PTR];
         if (TOKEN_END_OF_FILE == inst) break;
 
-        INST_PTR++;
+        //printf("%d(%s), %d, %d\n", INST_PTR, ToHex2(INST_PTR).c_str(), PeekParamType(), FRAME_PTR);
 
+        INST_PTR++;
+        
         switch (inst)
         {
+        case TOKEN_ALLOCA: Alloca(); break;
+        case TOKEN_BLOCK_START: BlockStart(); break;
+        case TOKEN_BLOCK_END: BlockEnd(); break;
         case TOKEN_LOAD_BOOL: LoadBool(); break;
         case TOKEN_LOAD_INT: LoadInt(); break;
         case TOKEN_LOAD_FLOAT: LoadFloat(); break;
@@ -57,13 +71,11 @@ void VM::Execute()
         case TOKEN_IF: IfJmp(); break;
         case TOKEN_JMP: Jmp(); break;
         case TOKEN_CALL: Call(); break;
-        case TOKEN_PUSH_SCRATCH_PTR: PushScratchPtr(); break;
-        case TOKEN_POP_SCRATCH_PTR: PopScratchPtr(); break;
         default:
             Error("Bytecode not handled: " + std::to_string(inst));
             quit = true;
         }
-
+        
         if (quit) break;
     }
 
@@ -104,11 +116,40 @@ void VM::Execute()
         }
     }
 
-
-
     printf("Done.\n");
 }
 
+void VM::Alloca()
+{
+    // allocate space on the frame stack for a variable
+    FRAME_PTR -= 5;
+}
+
+
+void VM::BlockStart()
+{
+    // push the previous block base pointer to the frame stack
+    //printf("block start: %d\n", BLOCK_BASE_PTR);
+    PushFrameInt(BLOCK_BASE_PTR);
+    
+    // set the block base pointer to this address
+    // this is where variable allocations will start
+    // and where local block memory will unwind to
+    BLOCK_BASE_PTR = FRAME_PTR;
+    //printf("BLOCK_BASE_PTR = FRAME_PTR = %d\n", FRAME_PTR);
+}
+
+void VM::BlockEnd()
+{
+    // unwind the frame pointer to the block base location
+    //printf("block end\n");
+    //printf("FRAME_PTR = BLOCK_BASE_PTR, %d = %d\n", FRAME_PTR, BLOCK_BASE_PTR);
+    FRAME_PTR = BLOCK_BASE_PTR;
+    
+    // pop the previous base off the frame stack
+    BLOCK_BASE_PTR = PopFrameInt();
+    //printf("BLOCK_BASE_PTR = %d\n", BLOCK_BASE_PTR);
+}
 
 void VM::LoadBool()
 {
@@ -136,13 +177,13 @@ void VM::LoadInt()
 
 void VM::LoadVar()
 {
-    size_t idx = ReadInstInt() * 5;
+    int idx = ReadInstInt();
     PushParamVar(idx);
 }
 
 void VM::StoreVar()
 {
-    size_t idx = ReadInstInt() * 5;
+    int idx = ReadInstInt();
     PopParamVar(idx);
 }
 
@@ -367,10 +408,7 @@ void VM::ComparisonOp(TokenTypeEnum oper)
         case TOKEN_GREATER: PushParamBool(ilhs > irhs); break;
         case TOKEN_GREATER_EQUAL: PushParamBool(ilhs >= irhs); break;
         }
-    }
-
-
-    
+    }   
 }
 
 
@@ -477,7 +515,11 @@ void VM::Jmp()
 void VM::Call()
 {
     uint16_t addr = ReadInstInt16();
-    m_stdlib[addr]();
+    if (m_memory.param_cnt < m_stdlib[addr].arity)
+    {
+        Error("Parameter count not met for stdlib function: " + m_stdlib[addr].name);
+    }
+    m_stdlib[addr].ftn();
 }
 
 void VM::ToFloat()
@@ -543,6 +585,7 @@ void VM::ToInt()
     }
 }
 
+
 void VM::ToString()
 {
     uint8_t rhs_type = PeekParamType();
@@ -579,12 +622,3 @@ void VM::ToString()
 }
 
 
-void VM::PushScratchPtr()
-{
-    PushReturnInt(SCRATCH_PTR);
-}
-
-void VM::PopScratchPtr()
-{
-    SCRATCH_PTR = PopReturnInt();
-}

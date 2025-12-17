@@ -1,105 +1,114 @@
 #include "Statements.h"
 #include "Environment.h"
+#include "Compiler.h"
 
 
-Bytecode Stmt::BreakStmt(Token oper, Environment* env)
+IRCode Stmt::BreakStmt(Token oper, Environment* env)
 {
-    Bytecode ret;
-    PushJmp(ret, env->GetParentLoopBreak());
+    IRCode ret;
+    Compiler::PushJmp(ret, env->GetParentLoopBreak());
     return ret;
 }
 
 
-Bytecode Stmt::ContinueStmt(Token oper, Environment* env)
+IRCode Stmt::ContinueStmt(Token oper, Environment* env)
 {
-    Bytecode ret;
-    PushJmp(ret, env->GetParentLoopContinue());
+    IRCode ret;
+    Compiler::PushJmp(ret, env->GetParentLoopContinue());
     return ret;
 }
 
 
-Bytecode Stmt::IfStmt(Token oper, Bytecode condition, Bytecode thenBranch, Bytecode elseBranch, Environment* env)
+IRCode Stmt::IfStmt(Token oper, IRCode condition, IRCode thenBranch, IRCode elseBranch, Environment* env)
 {
-    Bytecode ret;
-    Append(ret, condition);
+    IRCode ret;
+    Compiler::Append(ret, condition);
 
     std::string thenLabel = env->NewLabel("then");
     std::string tailLabel = env->NewLabel("tail");
 
-    Push(ret, Token(TOKEN_IF, oper.Line(), oper.Filename()));
-    Push(ret, Token(TOKEN_IDENTIFIER, thenLabel, oper.Line(), oper.Filename()));
-    PushLn(ret);
+    Compiler::Push(ret, Token(TOKEN_IF, oper.Line(), oper.Filename()));
+    Compiler::Push(ret, Token(TOKEN_IDENTIFIER, thenLabel, oper.Line(), oper.Filename()));
+    Compiler::PushLn(ret);
 
-    Append(ret, elseBranch);
-    PushJmp(ret, tailLabel);
+    Compiler::Append(ret, elseBranch);
+    Compiler::PushJmp(ret, tailLabel);
 
-    PushLabel(ret, thenLabel);
-    Append(ret, thenBranch);
-    PushJmp(ret, tailLabel);
+    Compiler::PushLabel(ret, thenLabel);
+    Compiler::Append(ret, thenBranch);
+    Compiler::PushJmp(ret, tailLabel);
 
-    PushLabel(ret, tailLabel);
+    Compiler::PushLabel(ret, tailLabel);
 
     return ret;
 }
 
 
-Bytecode Stmt::PrintStmt(Bytecode expr, Token oper)
+IRCode Stmt::PrintStmt(IRCode expr, Token oper)
 {
-    Bytecode ret;
-    Append(ret, expr);
-    Push(ret, oper);
+    IRCode ret;
+    Compiler::Append(ret, expr);
+    Compiler::Push(ret, oper);
     if (expr.empty())
     {
-        Push(ret, Token(TOKEN_PRINT_BLANK, oper.Line(), oper.Filename()));
+        Compiler::Push(ret, Token(TOKEN_PRINT_BLANK, oper.Line(), oper.Filename()));
     }
-    PushLn(ret);
+    Compiler::PushLn(ret);
     return ret;
 }
 
 
-Bytecode Stmt::VarStmt(Token oper, Environment* env)
+IRCode Stmt::VarStmt(Token oper, Environment* env)
 {
-    Bytecode ret;
-    PushNoop(ret);
-    
     std::string lex = oper.Lexeme();
-    env->DefineVariable(lex);
+    
+    IRCode ret;
+    Compiler::PushNoop(ret);
+
+    if (env->IsGlobal())
+    {
+        env->DefineGlobalVariable(lex);
+    }
+    else
+    {
+        env->DefineLocalVariable(lex);
+    }
 
     return ret;
 }
 
 
-Bytecode Stmt::WhileStmt(Token oper, Bytecode condition, Bytecode body, Bytecode post, std::string postLabel, std::string mergeLabel, Environment* env)
+IRCode Stmt::WhileStmt(Token oper, IRCode condition, IRCode body, IRCode post, std::string postLabel, std::string mergeLabel, Environment* env)
 {
-    Bytecode ret;
+    IRCode ret;
 
     std::string loopLabel = env->NewLabel("loop");
     std::string bodyLabel = env->NewLabel("body");
     
-    PushJmp(ret, loopLabel);
-    PushLabel(ret, loopLabel);
+    Compiler::PushJmp(ret, loopLabel);
+    Compiler::PushLabel(ret, loopLabel);
 
     // if condition is true, jump to body
-    Append(ret, condition);
-    Push(ret, Token(TOKEN_IF, oper.Line(), oper.Filename()));
-    Push(ret, Token(TOKEN_IDENTIFIER, bodyLabel, oper.Line(), oper.Filename()));
-    PushLn(ret);
+    Compiler::Append(ret, condition);
+    Compiler::Push(ret, Token(TOKEN_IF, oper.Line(), oper.Filename()));
+    Compiler::Push(ret, Token(TOKEN_IDENTIFIER, bodyLabel, oper.Line(), oper.Filename()));
+    Compiler::PushLn(ret);
 
     // else jump to merge
-    PushJmp(ret, mergeLabel);
+    Compiler::PushJmp(ret, mergeLabel);
 
     // insert body and jump to post
-    PushLabel(ret, bodyLabel);
-    Append(ret, body);
-    PushJmp(ret, postLabel);
+    Compiler::PushLabel(ret, bodyLabel);
+    Compiler::Append(ret, body);
+    Compiler::PushJmp(ret, postLabel);
 
     // insert post logic and jump back to the top
-    PushLabel(ret, postLabel);
-    Append(ret, post);
-    PushJmp(ret, loopLabel);
+    Compiler::PushLabel(ret, postLabel);
+    Compiler::Append(ret, post);
+    Compiler::PushJmp(ret, loopLabel);
 
     // insert merge
-    PushLabel(ret, mergeLabel);
+    Compiler::PushLabel(ret, mergeLabel);
     
     return ret;
 }

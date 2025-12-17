@@ -14,12 +14,12 @@ public:
     static Environment* Push()
     {
         Environment* e = new Environment();
-        //e->m_parent_function = nullptr;
         if (!m_stack.empty())
         {
             e->m_parent = m_stack.back();
-            //e->m_parent_function = e->m_parent->m_parent_function;
+            e->m_parent_function = e->m_parent->m_parent_function;
         }
+
         m_stack.push_back(e);
         return e;
     }
@@ -39,13 +39,29 @@ public:
         return nullptr;
     }
 
-    void DefineVariable(std::string lexeme)
+    bool IsGlobal() { return !m_parent; }
+
+    void DefineGlobalVariable(std::string lexeme)
     {
-        if (0 == m_alloca.count(lexeme))
+        // globals
+        if (0 == m_globals.count(lexeme))
         {
-            int idx = m_var_names.size();
-            m_var_names.push_back(lexeme);
-            m_alloca.insert(std::make_pair(lexeme, idx));
+            // offset on the global stack
+            int idx = m_global_alloca.size();
+            m_global_alloca.push_back(lexeme);
+            m_globals.insert(std::make_pair(lexeme, idx));
+        }
+    }
+
+    void DefineLocalVariable(std::string lexeme)
+    {
+        // frame locals
+        if (0 == m_locals.count(lexeme))
+        {
+            // relative offset on the frame stack
+            int idx = 1 + m_local_alloca[m_parent_function].size();
+            m_local_alloca[m_parent_function].push_back(lexeme);
+            m_locals.insert(std::make_pair(lexeme, -idx));
         }
     }
 
@@ -57,6 +73,14 @@ public:
     std::set<std::string>& GetStaticStrings()
     {
         return m_static_strings;
+    }
+
+    std::vector<std::string>& GetGlobals() {
+        return m_global_alloca;
+    }
+
+    std::vector<std::string>& GetLocals(std::string parent_function) {
+        return m_local_alloca[parent_function];
     }
 
     size_t GetVariable(Token token)
@@ -117,6 +141,7 @@ public:
     }
 
 
+
 private:
 
     Environment()
@@ -127,8 +152,9 @@ private:
     size_t GetVariable_Recursive(Token token)
     {
         std::string lex = token.Lexeme();
-        if (0 != m_alloca.count(lex)) return m_alloca.at(lex);
+        if (0 != m_locals.count(lex)) return m_locals.at(lex);
         if (m_parent) return m_parent->GetVariable_Recursive(token);
+        if (0 != m_globals.count(lex)) return m_globals.at(lex);
 
         Error(token, "Variable not found in environment.");
         return 0;
@@ -141,12 +167,15 @@ private:
     static size_t m_enum_counter;
 
     Environment* m_parent;
-    static std::vector<std::string> m_var_names;
-    std::map<std::string, int> m_alloca;
+    static std::map<std::string, std::vector<std::string>> m_local_alloca;
+    std::map<std::string, int> m_locals;
+
+    static std::vector<std::string> m_global_alloca;
+    static std::map<std::string, int> m_globals;
 
     std::string m_loopBreak;
     std::string m_loopContinue;
-
+    std::string m_parent_function;
 };
 
 #endif // ENVIRONMENT_H

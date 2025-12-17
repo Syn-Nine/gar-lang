@@ -8,6 +8,7 @@
 #include "Scanner.h"
 #include "Token.h"
 #include "Compiler.h"
+#include "Assembler.h"
 #include "VM.h"
 
 int main()
@@ -37,7 +38,7 @@ int main()
 
     Environment* env = Environment::Push();
     Compiler compiler(tokens, env, errorHandler);
-    TokenList bytecode = compiler.Compile();
+    TokenList ir = compiler.Compile();
     if (errorHandler->HasErrors()) {
         printf("Compiler Error:\n");
         errorHandler->Print();
@@ -46,12 +47,12 @@ int main()
     }
     env = Environment::Pop();
     
-    //printf("Compiler Output:\n%s\n\n", Token::Dump(bytecode).c_str());
+    //printf("Compiler Output:\n%s\n\n", Token::Dump(ir).c_str());
+    VM vm(env, errorHandler);
 
-    VM vm(bytecode, env, errorHandler);
-    vm.Initialize();
-    vm.Assemble();
-    printf("Assembler Output:\n%s\n", vm.Dump().c_str());
+    Assembler assembler(ir, env, errorHandler);
+    uint8_t* bytecode = assembler.Assemble();
+    printf("Assembler Output:\n%s\n", assembler.Dump().c_str());
     if (errorHandler->HasErrors()) {
         printf("Assembler Error:\n");
         errorHandler->Print();
@@ -59,7 +60,7 @@ int main()
         return 0;
     }
 
-    vm.Execute();
+    vm.Execute(bytecode);
     if (errorHandler->HasErrors()) {
         printf("Runtime Error:\n");
         errorHandler->Print();
@@ -70,5 +71,7 @@ int main()
 
 
     std::getchar();
+
+    return 0;
 }
 

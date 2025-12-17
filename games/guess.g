@@ -4,8 +4,10 @@ var secret = randi(1, 20)
 
 while tries > 0 {
     println("Enter a guess from 1 to 20, " + tries as string + " tries remaining")
-    
+
     var guess = input() as int
+    if 0 == guess { continue; }
+    
     if guess < secret {
         println("Too Small")
     }
@@ -22,4 +24,3 @@ while tries > 0 {
         println("Game Over")
     }
 }
-

@@ -139,3 +139,9 @@ Screenshot of rock-paper-scissors:
 
 ![t+25h rock-paper-scissors](https://github.com/Syn-Nine/gar-lang/blob/T+25h/images/t+25h_rps.png?raw=true)
 
+## T+32h: First Major Refactor
+In this update I broke apart the Assembler from the VM and refactored the Stdlib interface to make it more scalable. I removed the forth-like return stack and moved stratch memory allocation to the call stack. As part of the progress toward having functions with local variables, I added a globals variable block and an alloca instruction with variable hoisting to allocate space on the call stack with a moveable frame pointer. I've added a pointer to keep track of the start and of basic blocks so that temporary data inside a basic block scope can be freed by unwinding the pointer at the end of the block. I also started some prep work for an enum type that will be an auto incremented integer at compile time.
+
+
+
+

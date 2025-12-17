@@ -12,6 +12,7 @@ std::map<std::string, TokenTypeEnum> Token::GetKeywords()
 void Token::Initialize()
 {
     // single character tokens.
+    MapTokenLex(TOKEN_COLON, ":");
     MapTokenLex(TOKEN_COMMA, ",");
     MapTokenLex(TOKEN_MINUS, "-");
     MapTokenLex(TOKEN_HAT, "^");
@@ -25,6 +26,8 @@ void Token::Initialize()
     MapTokenLex(TOKEN_RIGHT_PAREN, ")");
     MapTokenLex(TOKEN_LEFT_BRACE, "{");
     MapTokenLex(TOKEN_RIGHT_BRACE, "}");
+    MapTokenLex(TOKEN_LEFT_BRACKET, "[");
+    MapTokenLex(TOKEN_RIGHT_BRACKET, "]");
     
 
     // two character tokens
@@ -44,6 +47,8 @@ void Token::Initialize()
     MapTokenLex(TOKEN_FLOAT, "");
     MapTokenLex(TOKEN_INTEGER, "");
     MapTokenLex(TOKEN_STRING, "");
+    MapTokenLex(TOKEN_ENUM, "");
+
 
     /*
     MapTokenLex(TOKEN_COLON, ":");
@@ -72,7 +77,7 @@ void Token::Initialize()
     MapTokenLex(TOKEN_AS, "as");
     MapTokenLex(TOKEN_BREAK, "break");
     MapTokenLex(TOKEN_CONTINUE, "continue");
-    //MapTokenLex(TOKEN_ENUM, "enum");
+    MapTokenLex(TOKEN_CONST, "const");
     MapTokenLex(TOKEN_FOR, "for");
     MapTokenLex(TOKEN_IF, "if");
     MapTokenLex(TOKEN_IN, "in");
@@ -143,6 +148,9 @@ void Token::Initialize()
 
 
     // low level language tokens
+    MapTokenLex(TOKEN_ALLOCA, "alloca");
+    MapTokenLex(TOKEN_BLOCK_START, "blockstart");
+    MapTokenLex(TOKEN_BLOCK_END, "blockend");
     MapTokenLex(TOKEN_CALL, "call");
     MapTokenLex(TOKEN_CAST_FLOAT, "castf");
     MapTokenLex(TOKEN_CAST_INT, "casti");
@@ -157,8 +165,6 @@ void Token::Initialize()
     MapTokenLex(TOKEN_LOAD_STRING, "loadstr");
     MapTokenLex(TOKEN_NEG, "neg");
     MapTokenLex(TOKEN_STORE_VAR, "storevar");
-    MapTokenLex(TOKEN_PUSH_SCRATCH_PTR, "pushscrp");
-    MapTokenLex(TOKEN_POP_SCRATCH_PTR, "popscrp");
     MapTokenLex(TOKEN_PRINT_BLANK, "prntblank");
     
 

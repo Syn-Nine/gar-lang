@@ -13,6 +13,7 @@ class Compiler
 {
 public:
     Compiler() = delete;
+
     Compiler(TokenList tokenList, Environment* environment, ErrorHandler* errorHandler)
     {
         m_tokenList = tokenList;
@@ -26,24 +27,24 @@ public:
     //-----------------------------------------------------------------------------
     TokenList Compile()
     {
-        Bytecode bc;
-        Push(m_bytecode, Token(TOKEN_PUSH_SCRATCH_PTR, 0, ""));
+        IRCode bc;
+        PushBlockStart(m_IRCode, Token(TOKEN_BLOCK_START, 0, ""));
 
         while (!IsAtEnd() && !m_errorHandler->HasErrors())
         {
             bc = Declaration();
             if (bc.empty()) break;
-            Append(m_bytecode, bc);
+            Append(m_IRCode, bc);
         }
 
-        Push(m_bytecode, Token(TOKEN_POP_SCRATCH_PTR, 0, ""));
-        Push(m_bytecode, Token(TOKEN_END_OF_FILE, 0, ""));
-        return m_bytecode;
+        PushBlockEnd(m_IRCode, Token(TOKEN_BLOCK_END, 0, ""));
+        Push(m_IRCode, Token(TOKEN_END_OF_FILE, 0, ""));
+        return m_IRCode;
     }
 
     
     //-----------------------------------------------------------------------------
-    Bytecode Declaration()
+    IRCode Declaration()
     {
         if (Match(TOKEN_VAR)) return VarDeclaration();
 
@@ -52,14 +53,14 @@ public:
 
 
     //-----------------------------------------------------------------------------
-    Bytecode VarDeclaration()
+    IRCode VarDeclaration()
     {
-        Bytecode ret;
+        IRCode ret;
         TokenList ids;
 
         while (true)
         {
-            if (!Consume(TOKEN_IDENTIFIER, "Expected identifier.")) return Bytecode();
+            if (!Consume(TOKEN_IDENTIFIER, "Expected identifier.")) return IRCode();
 
             Token id = Previous();
             ids.push_back(id);
@@ -69,17 +70,17 @@ public:
             Advance();
         }
 
-        if (!Consume(TOKEN_EQUAL, "Expected assignment after variable declaration.")) return Bytecode();
+        if (!Consume(TOKEN_EQUAL, "Expected assignment after variable declaration.")) return IRCode();
         
         for (int i = 0; i < ids.size(); ++i)
         {
-            Bytecode value = Addition();
-            if (value.empty()) return Bytecode();
-            Bytecode expr = Expr::AssignExpr(ids[i], value, m_env);
+            IRCode value = Addition();
+            if (value.empty()) return IRCode();
+            IRCode expr = Expr::AssignExpr(ids[i], value, m_env);
             Append(ret, expr);
             if (i < ids.size() - 1)
             {
-                if (!Consume(TOKEN_COMMA, "Expected comma.")) return Bytecode();
+                if (!Consume(TOKEN_COMMA, "Expected comma.")) return IRCode();
             }
         }
 
@@ -88,7 +89,7 @@ public:
 
 
     //-----------------------------------------------------------------------------
-    Bytecode Statement()
+    IRCode Statement()
     {
         if (Match(TOKEN_LEFT_BRACE)) return BlockStatement();
         if (Match(TOKEN_BREAK)) return Stmt::BreakStmt(Previous(), m_env);
@@ -104,18 +105,21 @@ public:
 
 
     //-----------------------------------------------------------------------------
-    Bytecode BlockStatement()
+    IRCode BlockStatement()
     {
-
+        Token oper = Previous();
+        IRCode ret;
+        
         m_env = Environment::Push();
+        PushBlockStart(ret, oper);
 
-        Bytecode ret;
         while (!Check(TOKEN_RIGHT_BRACE) && !IsAtEnd() && !m_errorHandler->HasErrors())
         {
-            Bytecode stmt = Declaration();
+            IRCode stmt = Declaration();
             Append(ret, stmt);
         }
 
+        PushBlockEnd(ret, oper);
         m_env = Environment::Pop();
 
         Consume(TOKEN_RIGHT_BRACE, "Expected '}' after block.");
@@ -124,25 +128,25 @@ public:
 
 
     //-----------------------------------------------------------------------------
-    Bytecode ForStatement()
+    IRCode ForStatement()
     {
-        if (!Consume(TOKEN_IDENTIFIER, "Expected identifier.")) return Bytecode();
+        if (!Consume(TOKEN_IDENTIFIER, "Expected identifier.")) return IRCode();
         Token id = Previous();
 
-        if (!Consume(TOKEN_IN, "Expected 'in'.")) return Bytecode();
+        if (!Consume(TOKEN_IN, "Expected 'in'.")) return IRCode();
 
-        Bytecode lhs = Addition(); // lhs of range
+        IRCode lhs = Addition(); // lhs of range
 
         if (!MatchVar(2, TOKEN_DOT_DOT, TOKEN_DOT_DOT_EQUAL))
         {
             Error(Previous(), "Expected range.");
-            return Bytecode();
+            return IRCode();
         }
         
         Token oper = Previous();
-        Bytecode one = Expr::LiteralExpr(Token(TOKEN_INTEGER, "1", 1, 1, oper.Line(), oper.Filename()));
+        IRCode one = Expr::LiteralExpr(Token(TOKEN_INTEGER, "1", 1, 1, oper.Line(), oper.Filename()));
 
-        Bytecode rhs = Addition(); // rhs of range
+        IRCode rhs = Addition(); // rhs of range
         if (oper.GetType() == TOKEN_DOT_DOT_EQUAL)
         {
             // if ..= then add one to rhs
@@ -152,15 +156,15 @@ public:
         if (!Check(TOKEN_LEFT_BRACE))
         {
             Error(oper, "Expected '{' after while condition.");
-            return Bytecode();
+            return IRCode();
         }
 
         std::string postLabel = m_env->NewLabel("post");
         std::string mergeLabel = m_env->NewLabel("merge");
 
-        Bytecode ret;
+        IRCode ret;
         m_env = Environment::Push();
-        Push(ret, Token(TOKEN_PUSH_SCRATCH_PTR, oper.Line(), oper.Filename()));
+        PushBlockStart(ret, oper);
 
         Token loop_end = Token(TOKEN_IDENTIFIER, "__loop_end", oper.Line(), oper.Filename());
 
@@ -172,19 +176,19 @@ public:
         Append(ret, Expr::AssignExpr(loop_end, rhs, m_env));
         
         // lhs < rhs
-        Bytecode condition = Expr::BinaryExpr(Expr::VariableExpr(id, m_env), Token(TOKEN_LESS, oper.Line(), oper.Filename()), Expr::VariableExpr(loop_end, m_env));
+        IRCode condition = Expr::BinaryExpr(Expr::VariableExpr(id, m_env), Token(TOKEN_LESS, oper.Line(), oper.Filename()), Expr::VariableExpr(loop_end, m_env));
 
         m_env->PushLoopBreakContinue(mergeLabel, postLabel);
-        Bytecode body = Statement();
+        IRCode body = Statement();
         m_env->PopLoopBreakContinue();
 
         // build post increment
-        Bytecode inc = Expr::BinaryExpr(Expr::VariableExpr(id, m_env), Token(TOKEN_PLUS, oper.Line(), oper.Filename()), one);
-        Bytecode post = Expr::AssignExpr(id, inc, m_env);
+        IRCode inc = Expr::BinaryExpr(Expr::VariableExpr(id, m_env), Token(TOKEN_PLUS, oper.Line(), oper.Filename()), one);
+        IRCode post = Expr::AssignExpr(id, inc, m_env);
 
         Append(ret, Stmt::WhileStmt(oper, condition, body, post, postLabel, mergeLabel, m_env));
         
-        Push(ret, Token(TOKEN_POP_SCRATCH_PTR, oper.Line(), oper.Filename()));
+        PushBlockEnd(ret, oper);
         m_env = Environment::Pop();
 
         return ret;
@@ -192,15 +196,15 @@ public:
 
 
     //-----------------------------------------------------------------------------
-    Bytecode IfStatement()
+    IRCode IfStatement()
     {
         Token token = Previous();
-        Bytecode condition = Expression();
+        IRCode condition = Expression();
 
         if (Check(TOKEN_LEFT_BRACE))
         {
-            Bytecode thenBranch = Statement();
-            Bytecode elseBranch;
+            IRCode thenBranch = Statement();
+            IRCode elseBranch;
 
             if (Match(TOKEN_ELSE))
             {
@@ -224,15 +228,15 @@ public:
             Error(token, "Expected '{' after if condition.");
         }
         
-        return Bytecode();
+        return IRCode();
     }
 
 
     //-----------------------------------------------------------------------------
-    Bytecode LoopStatement()
+    IRCode LoopStatement()
     {
         Token prev = Previous();
-        Bytecode condition = Expr::LiteralExpr(Token(TOKEN_TRUE, prev.Line(), prev.Filename()));
+        IRCode condition = Expr::LiteralExpr(Token(TOKEN_TRUE, prev.Line(), prev.Filename()));
         
         if (Check(TOKEN_LEFT_BRACE))
         {
@@ -240,10 +244,10 @@ public:
             std::string mergeLabel = m_env->NewLabel("merge");
 
             m_env->PushLoopBreakContinue(mergeLabel, postLabel);
-            Bytecode body = Statement();
+            IRCode body = Statement();
             m_env->PopLoopBreakContinue();
             
-            Bytecode post;
+            IRCode post;
 
             return Stmt::WhileStmt(prev, condition, body, post, postLabel, mergeLabel, m_env);
         }
@@ -252,17 +256,17 @@ public:
             Error(Previous(), "Expected '{' after loop statement.");
         }
 
-        return Bytecode();
+        return IRCode();
     }
 
     
     //-----------------------------------------------------------------------------
-    Bytecode PrintStatement()
+    IRCode PrintStatement()
     {
         Token prev = Previous();
         if (Consume(TOKEN_LEFT_PAREN, "Expected '(' after print."))
         {
-            Bytecode expr;
+            IRCode expr;
             Token str = Peek();
             if (!Check(TOKEN_RIGHT_PAREN)) expr = Expression();
 
@@ -271,15 +275,15 @@ public:
                 return Stmt::PrintStmt(expr, prev);
             }
         }
-        return Bytecode();
+        return IRCode();
     }
 
     
     //-----------------------------------------------------------------------------
-    Bytecode WhileStatement()
+    IRCode WhileStatement()
     {
         Token prev = Previous();
-        Bytecode condition = Expression();
+        IRCode condition = Expression();
 
         if (Check(TOKEN_LEFT_BRACE))
         {
@@ -287,10 +291,10 @@ public:
             std::string mergeLabel = m_env->NewLabel("merge");
 
             m_env->PushLoopBreakContinue(mergeLabel, postLabel);
-            Bytecode body = Statement();
+            IRCode body = Statement();
             m_env->PopLoopBreakContinue();
 
-            Bytecode post;
+            IRCode post;
             return Stmt::WhileStmt(prev, condition, body, post, postLabel, mergeLabel, m_env);
         }
         else
@@ -298,32 +302,32 @@ public:
             Error(Previous(), "Expected '{' after while condition.");
         }
 
-        return Bytecode();
+        return IRCode();
     }
 
     
     //-----------------------------------------------------------------------------
-    Bytecode ExpressionStatement()
+    IRCode ExpressionStatement()
     {
         return Expression();
     }
 
     
     //-----------------------------------------------------------------------------
-    Bytecode Expression()
+    IRCode Expression()
     {
         return Assignment();
     }
 
     //-----------------------------------------------------------------------------
-    Bytecode Assignment()
+    IRCode Assignment()
     {
         if (Check(TOKEN_IDENTIFIER) && CheckNext(TOKEN_EQUAL))
         {
             Advance();
             Token id = Previous();
             Advance();
-            Bytecode value = Addition();
+            IRCode value = Addition();
             return Expr::AssignExpr(id, value, m_env);
         }
 
@@ -331,13 +335,13 @@ public:
     }
 
     //-----------------------------------------------------------------------------
-    Bytecode Or()
+    IRCode Or()
     {
-        Bytecode lhs = And();
+        IRCode lhs = And();
         while (Match(TOKEN_OR))
         {
             Token oper = Previous();
-            Bytecode rhs = And();
+            IRCode rhs = And();
             lhs = Expr::BinaryExpr(lhs, oper, rhs);
         }
         return lhs;
@@ -345,13 +349,13 @@ public:
 
 
     //-----------------------------------------------------------------------------
-    Bytecode And()
+    IRCode And()
     {
-        Bytecode lhs = Comparison();
+        IRCode lhs = Comparison();
         while (Match(TOKEN_AND))
         {
             Token oper = Previous();
-            Bytecode rhs = Comparison();
+            IRCode rhs = Comparison();
             lhs = Expr::BinaryExpr(lhs, oper, rhs);
         }
         return lhs;
@@ -359,13 +363,13 @@ public:
 
 
     //-----------------------------------------------------------------------------
-    Bytecode Comparison()
+    IRCode Comparison()
     {
-        Bytecode lhs = Addition();
+        IRCode lhs = Addition();
         while (MatchVar(6, TOKEN_BANG_EQUAL, TOKEN_EQUAL_EQUAL, TOKEN_GREATER, TOKEN_GREATER_EQUAL, TOKEN_LESS, TOKEN_LESS_EQUAL))
         {
             Token oper = Previous();
-            Bytecode rhs = Addition();
+            IRCode rhs = Addition();
             lhs = Expr::BinaryExpr(lhs, oper, rhs);
         }
         return lhs;
@@ -373,13 +377,13 @@ public:
 
 
     //-----------------------------------------------------------------------------
-    Bytecode Addition()
+    IRCode Addition()
     {
-        Bytecode lhs = Multiplication();
+        IRCode lhs = Multiplication();
         while (MatchVar(2, TOKEN_MINUS, TOKEN_PLUS))
         {
             Token oper = Previous();
-            Bytecode rhs = Multiplication();
+            IRCode rhs = Multiplication();
             lhs = Expr::BinaryExpr(lhs, oper, rhs);
         }
         return lhs;
@@ -387,13 +391,13 @@ public:
 
     
     //-----------------------------------------------------------------------------
-    Bytecode Multiplication()
+    IRCode Multiplication()
     {
-        Bytecode lhs = Power();
+        IRCode lhs = Power();
         while (MatchVar(2, TOKEN_SLASH, TOKEN_STAR))
         {
             Token oper = Previous();
-            Bytecode rhs = Power();
+            IRCode rhs = Power();
             lhs = Expr::BinaryExpr(lhs, oper, rhs);
         }
         return lhs;
@@ -401,13 +405,13 @@ public:
 
     
     //-----------------------------------------------------------------------------
-    Bytecode Power()
+    IRCode Power()
     {
-        Bytecode lhs = Modulus();
+        IRCode lhs = Modulus();
         while (Match(TOKEN_HAT))
         {
             Token oper = Previous();
-            Bytecode rhs = Modulus();
+            IRCode rhs = Modulus();
             lhs = Expr::BinaryExpr(lhs, oper, rhs);
         }
         return lhs;
@@ -415,13 +419,13 @@ public:
 
     
     //-----------------------------------------------------------------------------
-    Bytecode Modulus()
+    IRCode Modulus()
     {
-        Bytecode lhs = As();
+        IRCode lhs = As();
         while (Match(TOKEN_PERCENT))
         {
             Token oper = Previous();
-            Bytecode rhs = As();
+            IRCode rhs = As();
             lhs = Expr::BinaryExpr(lhs, oper, rhs);
         }
         return lhs;
@@ -429,9 +433,9 @@ public:
 
     
     //-----------------------------------------------------------------------------
-    Bytecode As()
+    IRCode As()
     {
-        Bytecode lhs = Unary();
+        IRCode lhs = Unary();
         while (Match(TOKEN_AS))
         {
             if (MatchVar(3, TOKEN_VAR_INT, TOKEN_VAR_FLOAT, TOKEN_VAR_STRING))
@@ -442,7 +446,7 @@ public:
             else
             {
                 Error(Previous(), "Expected variable type after 'as'.");
-                return Bytecode();
+                return IRCode();
             }
         }
         return lhs;
@@ -450,12 +454,12 @@ public:
 
     
     //-----------------------------------------------------------------------------
-    Bytecode Unary()
+    IRCode Unary()
     {
         if (MatchVar(2, TOKEN_BANG, TOKEN_MINUS))
         {
             Token oper = Previous();
-            Bytecode rhs = Unary();
+            IRCode rhs = Unary();
             return Expr::UnaryExpr(oper, rhs);
         }
 
@@ -464,7 +468,7 @@ public:
 
     
     //-----------------------------------------------------------------------------
-    Bytecode Primary()
+    IRCode Primary()
     {
         if (MatchVar(4, TOKEN_TRUE, TOKEN_FALSE, TOKEN_FLOAT, TOKEN_INTEGER)) return Expr::LiteralExpr(Previous());
         if (Match(TOKEN_STRING)) return Expr::LiteralExpr(Previous(), Previous().StringValue(), m_env);
@@ -472,7 +476,7 @@ public:
 
         if (Match(TOKEN_LEFT_PAREN))
         {
-            Bytecode expr = Expression();
+            IRCode expr = Expression();
             Consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
             return expr;
         }
@@ -493,14 +497,14 @@ public:
             }
         }
 
-        return Bytecode();
+        return IRCode();
     }
 
 
     //-----------------------------------------------------------------------------
-    Bytecode FinishCall(Token callee)
+    IRCode FinishCall(Token callee)
     {
-        Bytecode params;        
+        IRCode params;        
         
         if (!Check(TOKEN_RIGHT_PAREN))
         {
@@ -511,10 +515,19 @@ public:
             } while (Match(TOKEN_COMMA));
         }
 
-        if (!Consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.")) return Bytecode();
+        if (!Consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.")) return IRCode();
         
         return Expr::CallExpr(params, callee);
     }
+
+    static void Append(IRCode& lhs, IRCode rhs);
+    static void Push(IRCode& lhs, Token rhs);
+    static void PushLn(IRCode& lhs);
+    static void PushJmp(IRCode& lhs, std::string label);
+    static void PushLabel(IRCode& lhs, std::string label);
+    static void PushNoop(IRCode& lhs);
+    static void PushBlockStart(IRCode& lhs, Token oper);
+    static void PushBlockEnd(IRCode& lhs, Token oper);
 
 private:
 
@@ -531,11 +544,10 @@ private:
     Token Previous();
     void Error(Token token, const std::string& err);
 
-
     Environment* m_env;
     ErrorHandler* m_errorHandler;
     TokenList m_tokenList;
-    TokenList m_bytecode;
+    TokenList m_IRCode;
     int m_current;
     
 };
