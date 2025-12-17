@@ -180,9 +180,9 @@ void Scanner::ScanToken()
 	switch (c)
 	{
 	// single character tokens
-	/*case ':': AddToken(TOKEN_COLON); break;
-	case ';': AddToken(TOKEN_SEMI_COLON); break;
-	case '\'': AddToken(TOKEN_APOSTROPHE); break;*/
+	//case ':': AddToken(TOKEN_COLON); break;
+	case ';': /* ignore */ break;
+	case ',': AddToken(TOKEN_COMMA); break;
 	case '(': AddToken(TOKEN_LEFT_PAREN); break;
 	case ')': AddToken(TOKEN_RIGHT_PAREN); break;
     case '{': AddToken(TOKEN_LEFT_BRACE); break;
@@ -210,6 +210,17 @@ void Scanner::ScanToken()
     case '<': AddToken(Match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS); break;
     case '&': Match('&') ? AddToken(TOKEN_AND) : m_errorHandler->Error(m_filename, m_line, unexpected_character); break;
     case '|': Match('|') ? AddToken(TOKEN_OR) : m_errorHandler->Error(m_filename, m_line, unexpected_character); break;
+
+    case '.':
+        if (Match('.'))
+        {
+            AddToken(Match('=') ? TOKEN_DOT_DOT_EQUAL : TOKEN_DOT_DOT);
+        }
+        else if (IsDigit(Peek()))
+        {
+            Decimal();
+        }
+        break;
 
 	// comments or divide
 	case '/':

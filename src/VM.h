@@ -6,10 +6,12 @@
 
 #include <format>
 #include <string>
+#include <functional>
 
 #define RET_PTR m_memory.ret_ptr
 #define PARAM_PTR m_memory.param_ptr
 #define INST_PTR m_memory.inst_ptr
+#define SCRATCH_PTR m_memory.scratch_ptr
 
 class Environment;
 
@@ -23,6 +25,7 @@ public:
         m_env = environment;
     }
 
+    void Initialize();
     void Assemble();
     void Execute();
 
@@ -34,6 +37,7 @@ public:
     {
         uint32_t ret_ptr;
         uint32_t param_ptr;
+        uint32_t scratch_ptr;
         uint16_t inst_ptr;
         uint8_t block[MEM_BLOCK_SZ];
     };
@@ -69,6 +73,11 @@ private:
     {
         m_memory.block[INST_PTR] = inst;
         INST_PTR++;
+    }
+
+    uint8_t PeekInst()
+    {
+        return m_memory.block[INST_PTR];
     }
 
     void PushInstBool(bool val)
@@ -121,6 +130,11 @@ private:
         return ret;
     }
 
+    uint8_t PeekParamType()
+    {
+        return m_memory.block[PARAM_PTR];
+    }
+    
     uint8_t PopParamType()
     {
         return m_memory.block[PARAM_PTR--];
@@ -133,6 +147,26 @@ private:
         return false;
     }
 
+    float PopParamFloat()
+    {
+        int ival = PopParamInt();
+        float fval;
+        memcpy(&fval, &ival, 4);
+        return fval;
+    }
+    
+    int PeekParamInt()
+    {
+        uint8_t* data = m_memory.block;
+        int a = data[PARAM_PTR];
+        int b = data[PARAM_PTR - 1];
+        int c = data[PARAM_PTR - 2];
+        int d = data[PARAM_PTR - 3];
+
+        int ret = (d << 24) | (c << 16) | (b << 8) | a;
+        return ret;
+    }
+
     int PopParamInt()
     {
         uint8_t* data = m_memory.block;
@@ -143,6 +177,21 @@ private:
 
         int ret = (d << 24) | (c << 16) | (b << 8) | a;
         return ret;
+    }
+
+    std::string PopParamString()
+    {
+        int addr = PopParamInt();
+        // copy string from arena address
+        uint8_t* data = m_memory.block;
+        int len = data[addr];
+        char buf[256];
+        for (int i = 0; i < len; ++i)
+        {
+            buf[i] = data[addr + i + 1];
+        }
+        buf[len] = 0;
+        return std::string(buf);
     }
 
     void PushParamType(uint8_t type)
@@ -187,6 +236,20 @@ private:
         PushParamType(PARAM_INT);
     }
 
+    void PushParamString(int addr)
+    {
+        uint8_t a = addr & 0xFF; addr = addr >> 8;
+        uint8_t b = addr & 0xFF; addr = addr >> 8;
+        uint8_t c = addr & 0xFF; addr = addr >> 8;
+        uint8_t d = addr & 0xFF;
+
+        m_memory.block[++PARAM_PTR] = d;
+        m_memory.block[++PARAM_PTR] = c;
+        m_memory.block[++PARAM_PTR] = b;
+        m_memory.block[++PARAM_PTR] = a;
+        PushParamType(PARAM_STRING);
+    }
+
     void PushParamVar(int idx)
     {
         m_memory.block[++PARAM_PTR] = m_memory.block[MEM_START_VARS + idx + 4];
@@ -205,6 +268,19 @@ private:
         m_memory.block[MEM_START_VARS + idx + 4] = m_memory.block[PARAM_PTR--];
     }
 
+    int NewScratchString(std::string str)
+    {
+        uint8_t* data = m_memory.block;
+        int len = str.length();
+        if (len > 255) len = 255; // length must fit into one byte
+        SCRATCH_PTR -= len + 1;
+        data[SCRATCH_PTR] = len;
+        for (int i = 0; i < len; ++i)
+        {
+            data[SCRATCH_PTR + 1 + i] = str.at(i);
+        }
+        return SCRATCH_PTR;
+    }
 
     void StartComment(std::string& row)
     {
@@ -225,6 +301,33 @@ private:
         }
     }
 
+    void PushReturnInt(int val)
+    {
+        uint8_t a = val & 0xFF; val = val >> 8;
+        uint8_t b = val & 0xFF; val = val >> 8;
+        uint8_t c = val & 0xFF; val = val >> 8;
+        uint8_t d = val & 0xFF;
+
+        m_memory.block[RET_PTR++] = d;
+        m_memory.block[RET_PTR++] = c;
+        m_memory.block[RET_PTR++] = b;
+        m_memory.block[RET_PTR++] = a;
+    }
+
+    int PopReturnInt()
+    {
+        uint8_t* data = m_memory.block;
+        int a = data[--RET_PTR];
+        int b = data[--RET_PTR];
+        int c = data[--RET_PTR];
+        int d = data[--RET_PTR];
+
+        int ret = (d << 24) | (c << 16) | (b << 8) | a;
+        return ret;
+    }
+
+
+
     // Executive
     void LoadBool();
     void LoadInt();
@@ -241,7 +344,12 @@ private:
     void Print(bool newline);
     void IfJmp();
     void Jmp();
-    
+    void Call();
+    void ToFloat();
+    void ToInt();
+    void ToString();
+    void PushScratchPtr();
+    void PopScratchPtr();
     //
 
     std::string ToHex1(char val)
@@ -282,6 +390,9 @@ private:
     std::vector<pp_jmps_s> m_pp_jmps;
     std::map<std::string, size_t> m_pp_labels;
 
+    typedef std::function<void()> StdFunc;
+    std::vector<StdFunc> m_stdlib;
+    std::map<std::string, size_t> m_stdlib_lookup;
 };
 
 #endif // VM_H

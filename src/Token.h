@@ -12,6 +12,7 @@ enum TokenTypeEnum
     // ------------------------------------------------------------------------
     
     // single character tokens.
+    TOKEN_COMMA,
     TOKEN_MINUS,
     TOKEN_HAT,
     TOKEN_PLUS,
@@ -39,6 +40,8 @@ enum TokenTypeEnum
     TOKEN_LESS_EQUAL,
     TOKEN_OR,
     TOKEN_AND,
+    TOKEN_DOT_DOT,
+    TOKEN_DOT_DOT_EQUAL,
 
     /*TOKEN_AT,
     TOKEN_AT_AT,
@@ -63,17 +66,25 @@ enum TokenTypeEnum
     TOKEN_FALSE,
     TOKEN_PI,
     //
+    TOKEN_AS,
+    TOKEN_BREAK,
+    TOKEN_CONTINUE,
+    //TOKEN_ENUM,
+    TOKEN_FOR,
     TOKEN_IF,
+    TOKEN_IN,
     TOKEN_ELSE,
+    TOKEN_LOOP,
     TOKEN_PRINT,
     TOKEN_PRINTLN,
     TOKEN_VAR,
-
+    TOKEN_VAR_INT,
+    TOKEN_VAR_FLOAT,
+    TOKEN_VAR_STRING,
+    TOKEN_WHILE,
     /*
     TOKEN_ABS,
     TOKEN_ASSERT,
-    TOKEN_AS_FLOAT,
-    TOKEN_AS_INT,
     TOKEN_CALL,
     TOKEN_ENUM,
     TOKEN_FILELINE,
@@ -116,16 +127,23 @@ enum TokenTypeEnum
 
     // low level language tokens
     // ------------------------------------------------------------------------
+    TOKEN_CALL,
+    TOKEN_CAST_FLOAT,
+    TOKEN_CAST_INT,
+    TOKEN_CAST_STRING,
+    TOKEN_INV,
+    TOKEN_JMP,
     TOKEN_LABEL,
     TOKEN_LOAD_BOOL,
     TOKEN_LOAD_FLOAT,
     TOKEN_LOAD_INT,
     TOKEN_LOAD_VAR,
     TOKEN_LOAD_STRING,
-    TOKEN_INV,
-    TOKEN_JMP,
     TOKEN_NEG,
     TOKEN_STORE_VAR,
+    TOKEN_PUSH_SCRATCH_PTR,
+    TOKEN_POP_SCRATCH_PTR,
+    TOKEN_PRINT_BLANK,
 
 
     TOKEN_NOOP,
@@ -213,7 +231,7 @@ typedef std::vector<Token> TokenList;
 typedef TokenList Bytecode;
 
 
-static void Append(Bytecode& lhs, Bytecode& rhs)
+static void Append(Bytecode& lhs, Bytecode rhs)
 {
     for (size_t i = 0; i < rhs.size(); ++i)
     {

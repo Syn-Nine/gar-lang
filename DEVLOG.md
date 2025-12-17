@@ -115,3 +115,27 @@ Screenshot of static string references:
 
 ![t+20h screenshot strings](https://github.com/Syn-Nine/gar-lang/blob/T+20h/images/t+20h_str.png?raw=true)
 
+
+## T+25h: Casting, Loops, Stdlib, 2 Games
+I now have the ability to cast from bool/float/int to string, and from string to float/int using the "as" keyword. Casting to string creates a temporary string in a scratch region just below the static data at the end of the arena. To support this I've added environment scoping for the scratch stack and variable stack. The compiler will search up the scope tree to find a variable if needed.
+
+This update also includes loop, while, and for statements. All of these are implemented in a While loop statement under the hood. These are basically scope blocks that have jump logic to jump back to the top if a condition is met, or else jump to a tail label and continue on. Continue and Break keywords are provided to short circuit back to the top or bottom labels respectively.
+
+I've started to thinking about how to implement standard library calls from within the code. There is an array of anonymous functions that is created when the VM initializes. The index into the array is used by the "call" bytecode, which calls back to the function. Inside the function it pops values from the parameter stack, performs the desired operation, and pushes a result if applicable.
+
+This was stable enough that I was able to make a text games for guess-the-number and rock-paper-scissors. I found myself wanting to have semi-colons between instructions to improve readability so I made the lexer ignore them for now so I can use them but they don't mean anything syntactially.
+
+At this point, the overall goal for the jam has been met, I've made a game in custom language in roughly 25 hours, but why stop here?
+
+The next big features are arrays and functions, which means it's time to do the first big refactor using the lessons learned so far. I like that there is a temporary scratch arena for variable length temporary data at the back of the variable stack, but this was more of hack just to get temporary string operations in and should be replaced. I will need a moving function frame pointer so that I can call functions recursively. I want to add constants and need to differentiate between globals and local addresses so the variable stack needs major rework anyway with the inclusion of something like LLVM's alloca statement.
+
+Right now I have a return stack that is holding the unwinding information for the temporary scratch arena so that it can get cleaned up automatically at the end of basic blocks. Since I need to put in function calling I'm going to need something better. I'm thinking I'll remove the forth-like return stack and turn it into a call stack that also holds scratch data. Then I'll explicitly track the block pointer, previous function frame pointer, return address, and temporary scratch pointer.
+
+Screenshot of guess-the-number:
+
+![t+25h guess-the-number](https://github.com/Syn-Nine/gar-lang/blob/T+25h/images/t+25h_guess.png?raw=true)
+
+Screenshot of rock-paper-scissors:
+
+![t+25h rock-paper-scissors](https://github.com/Syn-Nine/gar-lang/blob/T+25h/images/t+25h_rps.png?raw=true)
+

@@ -1,5 +1,6 @@
 #include "VM.h"
 
+#include <stdexcept>
 
 void VM::Execute()
 {
@@ -34,6 +35,9 @@ void VM::Execute()
         case TOKEN_STAR:
             BinaryOp(inst);
             break;
+        case TOKEN_CAST_FLOAT: ToFloat(); break;
+        case TOKEN_CAST_INT: ToInt(); break;
+        case TOKEN_CAST_STRING: ToString(); break;
         case TOKEN_AND: // intentional fall-through
         case TOKEN_OR:
             AndOr(inst);
@@ -52,6 +56,9 @@ void VM::Execute()
         case TOKEN_PRINTLN: Print(true); break;
         case TOKEN_IF: IfJmp(); break;
         case TOKEN_JMP: Jmp(); break;
+        case TOKEN_CALL: Call(); break;
+        case TOKEN_PUSH_SCRATCH_PTR: PushScratchPtr(); break;
+        case TOKEN_POP_SCRATCH_PTR: PopScratchPtr(); break;
         default:
             Error("Bytecode not handled: " + std::to_string(inst));
             quit = true;
@@ -79,9 +86,7 @@ void VM::Execute()
             }
             else if (PARAM_FLOAT == type)
             {
-                int ival = PopParamInt();
-                float fval;
-                memcpy(&fval, &ival, 4);
+                float fval = PopParamFloat();
                 printf("%d: FLOAT : %f\n", cc, fval);
             }
             else if (PARAM_INT == type)
@@ -91,18 +96,9 @@ void VM::Execute()
             }
             else if (PARAM_STRING == type)
             {
-                int addr = PopParamInt();
-                // copy string from static block
-                std::string s;
-                uint8_t* data = m_memory.block;
-                int len = data[addr];
-                char buf[256];
-                for (int i = 0; i < len; ++i)
-                {
-                    buf[i] = data[addr + i + 1];
-                }
-                buf[len] = 0;
-                printf("%d: STRING: @%d=\"%s\"\n", cc, addr, buf);
+                int addr = PeekParamInt();
+                std::string str = PopParamString();
+                printf("%d: STRING: @%d=\"%s\"\n", cc, addr, str.c_str());
             }
             cc++;
         }
@@ -163,31 +159,56 @@ void VM::BinaryOp(TokenTypeEnum oper)
     int irhs, ilhs;
     float frhs, flhs;
     bool isfloat = false;
+    std::string srhs;
+    std::string slhs;
 
     uint8_t rhs_type = PopParamType();
     if (PARAM_FLOAT == rhs_type)
     {
         isfloat = true;
-        int ival = PopParamInt();
-        memcpy(&frhs, &ival, 4);
+        frhs = PopParamFloat();
     }
     else if (PARAM_INT == rhs_type)
     {
         irhs = PopParamInt();
         frhs = (float)irhs;
     }
+    else if (PARAM_STRING == rhs_type)
+    {
+        srhs = PopParamString();
+    }
 
     uint8_t lhs_type = PopParamType();
     if (PARAM_FLOAT == lhs_type)
     {
         isfloat = true;
-        int ival = PopParamInt();
-        memcpy(&flhs, &ival, 4);
+        flhs = PopParamFloat();
     }
     else if (PARAM_INT == lhs_type)
     {
         ilhs = PopParamInt();
         flhs = (float)ilhs;
+    }
+    else if (PARAM_STRING == lhs_type)
+    {
+        slhs = PopParamString();
+    }
+
+    if (rhs_type == PARAM_STRING || lhs_type == PARAM_STRING)
+    {
+        if (rhs_type != PARAM_STRING || lhs_type != PARAM_STRING)
+        {
+            Error("String parameter type mismatch in binary op.");
+            return;
+        }
+        if (TOKEN_PLUS != oper)
+        {
+            Error("Operator mismatch in string binary op.");
+            return;
+        }
+        int addr = NewScratchString(slhs + srhs);
+        PushParamString(addr);
+        return;
     }
 
     if (isfloat || TOKEN_SLASH == oper)
@@ -244,13 +265,14 @@ void VM::ComparisonOp(TokenTypeEnum oper)
     bool brhs, blhs;
     bool isfloat = false;
     bool isbool = false;
+    std::string srhs;
+    std::string slhs;
 
     uint8_t rhs_type = PopParamType();
     if (PARAM_FLOAT == rhs_type)
     {
         isfloat = true;
-        int ival = PopParamInt();
-        memcpy(&frhs, &ival, 4);
+        frhs = PopParamFloat();
     }
     else if (PARAM_INT == rhs_type)
     {
@@ -262,13 +284,16 @@ void VM::ComparisonOp(TokenTypeEnum oper)
         isbool = true;
         brhs = PopParamBool();
     }
+    else if (PARAM_STRING == rhs_type)
+    {
+        srhs = PopParamString();
+    }
 
     uint8_t lhs_type = PopParamType();
     if (PARAM_FLOAT == lhs_type)
     {
         isfloat = true;
-        int ival = PopParamInt();
-        memcpy(&flhs, &ival, 4);
+        flhs = PopParamFloat();
     }
     else if (PARAM_INT == lhs_type)
     {
@@ -279,6 +304,27 @@ void VM::ComparisonOp(TokenTypeEnum oper)
     {
         isbool = true;
         blhs = PopParamBool();
+    }
+    else if (PARAM_STRING == lhs_type)
+    {
+        slhs = PopParamString();
+    }
+
+    if (rhs_type == PARAM_STRING || lhs_type == PARAM_STRING)
+    {
+        if (rhs_type != PARAM_STRING || lhs_type != PARAM_STRING)
+        {
+            Error("String parameter type mismatch in comparison.");
+            return;
+        }
+        if (TOKEN_EQUAL_EQUAL != oper && TOKEN_BANG_EQUAL != oper)
+        {
+            Error("Operator mismatch in string comparison.");
+            return;
+        }
+        bool eq = slhs.compare(srhs) == 0;
+        TOKEN_EQUAL_EQUAL == oper ? PushParamBool(eq) : PushParamBool(!eq);
+        return;
     }
 
     if (isbool)
@@ -330,32 +376,16 @@ void VM::ComparisonOp(TokenTypeEnum oper)
 
 void VM::Negate()
 {
-    int irhs, ilhs;
-    float frhs, flhs;
-    bool isfloat = false;
-
     uint8_t rhs_type = PopParamType();
     if (PARAM_FLOAT == rhs_type)
     {
-        isfloat = true;
-        int ival = PopParamInt();
-        memcpy(&frhs, &ival, 4);
+        float val = -PopParamFloat();
+        PushParamFloat(val);
     }
     else if (PARAM_INT == rhs_type)
     {
-        irhs = PopParamInt();
-        frhs = (float)irhs;
-    }
-
-    if (isfloat)
-    {
-        float tot = -frhs;
-        PushParamFloat(tot);
-    }
-    else
-    {
-        int tot = -irhs;
-        PushParamInt(tot);
+        int val = -PopParamInt();
+        PushParamInt(val);
     }
 }
 
@@ -376,6 +406,14 @@ void VM::Invert()
 
 void VM::Print(bool newline)
 {
+    if ((uint8_t)TOKEN_PRINT_BLANK == PeekInst())
+    {
+        INST_PTR++;
+        // empty print statement
+        if (newline) printf("\n");
+        return;
+    }
+
     uint8_t rhs_type = PopParamType();
     if (PARAM_BOOL == rhs_type)
     {
@@ -385,15 +423,18 @@ void VM::Print(bool newline)
     }
     else if (PARAM_FLOAT == rhs_type)
     {
-        float fval;
-        int ival = PopParamInt();
-        memcpy(&fval, &ival, 4);
+        float fval = PopParamFloat();
         printf("%f", fval);
     }
     else if (PARAM_INT == rhs_type)
     {
         int ival = PopParamInt();
         printf("%d", ival);
+    }
+    else if (PARAM_STRING == rhs_type)
+    {
+        std::string str = PopParamString();
+        printf("%s", str.c_str());
     }
     else
     {
@@ -430,4 +471,120 @@ void VM::IfJmp()
 void VM::Jmp()
 {
     INST_PTR = ReadInstInt16();
+}
+
+
+void VM::Call()
+{
+    uint16_t addr = ReadInstInt16();
+    m_stdlib[addr]();
+}
+
+void VM::ToFloat()
+{
+    uint8_t rhs_type = PeekParamType();
+    if (PARAM_FLOAT == rhs_type) return; // noop
+
+    PopParamType();
+    if (PARAM_INT == rhs_type)
+    {
+        int val = PopParamInt();
+        PushParamFloat(val);
+    }
+    else if (PARAM_STRING == rhs_type)
+    {
+        std::string str = PopParamString();
+        PushParamFloat(std::stod(str));
+    }
+    else
+    {
+        Error("Invalid cast to float.");
+    }
+}
+
+void VM::ToInt()
+{
+    uint8_t rhs_type = PeekParamType();
+    if (PARAM_INT == rhs_type) return; // noop
+
+    PopParamType();
+    if (PARAM_FLOAT == rhs_type)
+    {
+        float val = PopParamFloat();
+        PushParamInt(val);
+    }
+    else if (PARAM_BOOL == rhs_type)
+    {
+        bool val = PopParamBool();
+        if (val) { PushParamInt(1); }
+        else { PushParamInt(0); }
+    }
+    else if (PARAM_STRING == rhs_type)
+    {
+        std::string str = PopParamString();
+        int64_t x = 0;
+        try
+        {
+            x = std::stol(str);
+        }
+        catch (std::invalid_argument const& ex)
+        {
+            x = 0;
+        }
+        catch (std::out_of_range const& ex)
+        {
+            x = 0;
+        }
+        PushParamInt(x);
+    }
+    else
+    {
+        Error("Invalid cast to int.");
+    }
+}
+
+void VM::ToString()
+{
+    uint8_t rhs_type = PeekParamType();
+    if (PARAM_STRING == rhs_type) return; // noop
+
+    PopParamType();
+    if (PARAM_FLOAT == rhs_type)
+    {
+        float val = PopParamFloat();
+        std::string str = std::to_string(val);
+        int addr = NewScratchString(str);
+        PushParamString(addr);
+    }
+    else if (PARAM_BOOL == rhs_type)
+    {
+        bool val = PopParamBool();
+        std::string str;
+        if (val) { str = "true"; }
+        else { str = "false"; }
+        int addr = NewScratchString(str);
+        PushParamString(addr);
+    }
+    else if (PARAM_INT == rhs_type)
+    {
+        int val = PopParamInt();
+        std::string str = std::to_string(val);
+        int addr = NewScratchString(str);
+        PushParamString(addr);
+    }
+    else
+    {
+        Error("Invalid cast to string.");
+    }
+}
+
+
+void VM::PushScratchPtr()
+{
+    PushReturnInt(SCRATCH_PTR);
+}
+
+void VM::PopScratchPtr()
+{
+    SCRATCH_PTR = PopReturnInt();
 }
