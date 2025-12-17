@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "Utilities.h"
+
 class ErrorHandler
 {
 public:
@@ -43,7 +45,7 @@ public:
 		printf("\n");
 		for (auto& e : m_errorList)
 		{
-			printf("File: %s, Line %d : %s\n", e.filename.c_str(), e.line, e.text.c_str());
+			printf("File: %s, Line %d %s : %s\n", e.filename.c_str(), e.line, ToHex2(e.line).c_str(), e.text.c_str());
 		}
 	}
 

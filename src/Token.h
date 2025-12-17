@@ -12,6 +12,7 @@ enum TokenTypeEnum
     // ------------------------------------------------------------------------
     
     // single character tokens.
+    TOKEN_COLON,
     TOKEN_COMMA,
     TOKEN_MINUS,
     TOKEN_HAT,
@@ -25,8 +26,10 @@ enum TokenTypeEnum
     TOKEN_RIGHT_PAREN,
     TOKEN_LEFT_BRACE,
     TOKEN_RIGHT_BRACE,
+    TOKEN_LEFT_BRACKET,
+    TOKEN_RIGHT_BRACKET,
 
-    /*TOKEN_COLON,
+    /*
     TOKEN_SEMI_COLON,
     TOKEN_APOSTROPHE,
     */
@@ -60,6 +63,7 @@ enum TokenTypeEnum
     TOKEN_STRING,
     TOKEN_INTEGER,
     TOKEN_FLOAT,
+    TOKEN_ENUM,
 
     // keywords
     TOKEN_TRUE,
@@ -69,7 +73,7 @@ enum TokenTypeEnum
     TOKEN_AS,
     TOKEN_BREAK,
     TOKEN_CONTINUE,
-    //TOKEN_ENUM,
+    TOKEN_CONST,
     TOKEN_FOR,
     TOKEN_IF,
     TOKEN_IN,
@@ -127,6 +131,9 @@ enum TokenTypeEnum
 
     // low level language tokens
     // ------------------------------------------------------------------------
+    TOKEN_ALLOCA,
+    TOKEN_BLOCK_START,
+    TOKEN_BLOCK_END,
     TOKEN_CALL,
     TOKEN_CAST_FLOAT,
     TOKEN_CAST_INT,
@@ -141,8 +148,6 @@ enum TokenTypeEnum
     TOKEN_LOAD_STRING,
     TOKEN_NEG,
     TOKEN_STORE_VAR,
-    TOKEN_PUSH_SCRATCH_PTR,
-    TOKEN_POP_SCRATCH_PTR,
     TOKEN_PRINT_BLANK,
 
 
@@ -228,43 +233,8 @@ private:
 };
 
 typedef std::vector<Token> TokenList;
-typedef TokenList Bytecode;
+typedef TokenList IRCode;
 
 
-static void Append(Bytecode& lhs, Bytecode rhs)
-{
-    for (size_t i = 0; i < rhs.size(); ++i)
-    {
-        lhs.push_back(rhs[i]);
-    }
-}
-
-static void Push(Bytecode& lhs, Token rhs)
-{
-    lhs.push_back(rhs);
-}
-
-static void PushLn(Bytecode& lhs)
-{
-    Push(lhs, Token(TOKEN_LN, 0, ""));
-}
-
-static void PushJmp(Bytecode& lhs, std::string label)
-{
-    Push(lhs, Token(TOKEN_JMP, 0, ""));
-    Push(lhs, Token(TOKEN_IDENTIFIER, label, 0, ""));
-    PushLn(lhs);
-}
-
-static void PushLabel(Bytecode& lhs, std::string label)
-{
-    Push(lhs, Token(TOKEN_LABEL, label, 0, ""));
-    PushLn(lhs);
-}
-
-static void PushNoop(Bytecode& lhs)
-{
-    Push(lhs, Token(TOKEN_NOOP, 0, ""));
-}
 
 #endif // TOKEN_H

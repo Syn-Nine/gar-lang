@@ -32,6 +32,7 @@ private:
 
 	char Advance();
 	void Decimal();
+    void Enum();
 	void Identifier();
 	bool IsAlpha(char c);
 	bool IsAlphaNumeric(char c);

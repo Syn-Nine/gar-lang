@@ -16,8 +16,8 @@ while tries > 0 {
     loop {
         var s = input()
         if "r" == s      { guess = ROCK;     println("Player: Rock");     break }
-        else if "p" == s { guess = PAPER;    println("Player: PAPER");    break }
-        else if "s" == s { guess = SCISSORS; println("Player: SCISSORS"); break }
+        else if "p" == s { guess = PAPER;    println("Player: Paper");    break }
+        else if "s" == s { guess = SCISSORS; println("Player: Scissors"); break }
         println("input invalid.")
     }
     

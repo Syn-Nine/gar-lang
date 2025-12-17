@@ -172,3 +172,53 @@ Token Compiler::Previous()
     return m_tokenList.at(m_current - 1);
 }
 
+
+
+void Compiler::Append(IRCode& lhs, IRCode rhs)
+{
+    for (size_t i = 0; i < rhs.size(); ++i)
+    {
+        lhs.push_back(rhs[i]);
+    }
+}
+
+void Compiler::Push(IRCode& lhs, Token rhs)
+{
+    lhs.push_back(rhs);
+}
+
+void Compiler::PushLn(IRCode& lhs)
+{
+    Push(lhs, Token(TOKEN_LN, 0, ""));
+}
+
+void Compiler::PushJmp(IRCode& lhs, std::string label)
+{
+    Push(lhs, Token(TOKEN_JMP, 0, ""));
+    Push(lhs, Token(TOKEN_IDENTIFIER, label, 0, ""));
+    PushLn(lhs);
+}
+
+void Compiler::PushLabel(IRCode& lhs, std::string label)
+{
+    Push(lhs, Token(TOKEN_LABEL, label, 0, ""));
+    PushLn(lhs);
+}
+
+void Compiler::PushNoop(IRCode& lhs)
+{
+    Push(lhs, Token(TOKEN_NOOP, 0, ""));
+    PushLn(lhs);
+}
+
+void Compiler::PushBlockStart(IRCode& lhs, Token oper)
+{
+    Push(lhs, Token(TOKEN_BLOCK_START, oper.Line(), oper.Filename()));
+    PushLn(lhs);
+}
+
+void Compiler::PushBlockEnd(IRCode& lhs, Token oper)
+{
+    Push(lhs, Token(TOKEN_BLOCK_END, oper.Line(), oper.Filename()));
+    PushLn(lhs);
+}
