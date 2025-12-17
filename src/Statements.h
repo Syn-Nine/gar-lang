@@ -9,10 +9,12 @@ class Environment;
 class Stmt
 {
 public:
-    static Bytecode BlockStmt(Bytecode body, Environment* env);
+    static Bytecode BreakStmt(Token oper, Environment* env);
+    static Bytecode ContinueStmt(Token oper, Environment* env);
     static Bytecode IfStmt(Token oper, Bytecode condition, Bytecode thenBranch, Bytecode elseBranch, Environment* env);
     static Bytecode PrintStmt(Bytecode expr, Token oper);
     static Bytecode VarStmt(Token oper, Environment* env);
+    static Bytecode WhileStmt(Token oper, Bytecode condition, Bytecode body, Bytecode post, std::string postLabel, std::string mergeLabel, Environment* env);
 
 private:
 

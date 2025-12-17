@@ -12,7 +12,7 @@
 
 int main()
 {
-    const char* filename = "code.g";
+    const char* filename = "rps.g";
     char* code = LoadFileText(filename);
     if (!code) {
         printf("Failed to open source: %s\n", filename);
@@ -35,7 +35,7 @@ int main()
     //printf("%s:\n%s\n\n", filename, Token::Dump(tokens).c_str());
     printf("Input:\n%s\n\n", code);
 
-    Environment* env = new Environment();
+    Environment* env = Environment::Push();
     Compiler compiler(tokens, env, errorHandler);
     TokenList bytecode = compiler.Compile();
     if (errorHandler->HasErrors()) {
@@ -44,10 +44,12 @@ int main()
         std::getchar();
         return 0;
     }
+    env = Environment::Pop();
     
     //printf("Compiler Output:\n%s\n\n", Token::Dump(bytecode).c_str());
 
     VM vm(bytecode, env, errorHandler);
+    vm.Initialize();
     vm.Assemble();
     printf("Assembler Output:\n%s\n", vm.Dump().c_str());
     if (errorHandler->HasErrors()) {

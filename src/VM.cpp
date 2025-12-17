@@ -1,8 +1,76 @@
 #include "VM.h"
 #include "Environment.h"
 
+
 #include <set>
 #include <string>
+#include <random>
+#include <iostream>
+
+
+double __rand_impl()
+{
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::uniform_real_distribution<> dist(0.0, 1.0);
+    return dist(gen);
+}
+
+int64_t __rand_range_impl(int64_t lhs, int64_t rhs)
+{
+    if (lhs == rhs) return lhs;
+    if (lhs > rhs) {
+        int64_t temp = lhs;
+        lhs = rhs;
+        rhs = temp;
+    }
+    // todo - go back and profile
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dist(lhs, rhs);
+    return dist(gen);
+}
+
+std::string console_input()
+{
+    char p[256];
+    memset(p, 0, 256);
+    std::cin.getline(p, 255);
+    return std::string(p);
+}
+
+void VM::Initialize()
+{
+    // register standard library functions
+
+    {
+        StdFunc func = [this]() {
+            uint8_t rhs_type = PopParamType();
+            if (PARAM_INT != rhs_type) { Error("Invalid parameter type."); return; }
+            int rhs = PopParamInt();
+            uint8_t lhs_type = PopParamType();
+            if (PARAM_INT != lhs_type) { Error("Invalid parameter type."); return; }
+            int lhs = PopParamInt();
+            int ret = __rand_range_impl(lhs, rhs);
+            PushParamInt(ret);
+            };
+        size_t idx = m_stdlib.size();
+        m_stdlib.push_back(func);
+        m_stdlib_lookup.insert(std::make_pair("%randi", idx));
+    }
+
+    {
+        StdFunc func = [this]() {
+            std::string str = console_input();
+            int addr = NewScratchString(str);
+            PushParamString(addr);
+            };
+        size_t idx = m_stdlib.size();
+        m_stdlib.push_back(func);
+        m_stdlib_lookup.insert(std::make_pair("%input", idx));
+    }
+}
+
 
 void VM::Assemble()
 {
@@ -31,6 +99,7 @@ void VM::Assemble()
             data[addr + 1 + i] = str.at(i);
         }
     }
+    SCRATCH_PTR = addr;
 
     // process byte codes
     for (size_t i = 0; i < m_bytecode.size(); ++i)
@@ -59,6 +128,9 @@ void VM::Assemble()
         case TOKEN_NEG:
         case TOKEN_AND:
         case TOKEN_OR:
+        case TOKEN_CAST_FLOAT:
+        case TOKEN_CAST_INT:
+        case TOKEN_CAST_STRING:
         case TOKEN_EQUAL_EQUAL:
         case TOKEN_BANG_EQUAL:
         case TOKEN_LESS:
@@ -67,6 +139,9 @@ void VM::Assemble()
         case TOKEN_GREATER_EQUAL:
         case TOKEN_PRINT:
         case TOKEN_PRINTLN:
+        case TOKEN_PRINT_BLANK:
+        case TOKEN_PUSH_SCRATCH_PTR:
+        case TOKEN_POP_SCRATCH_PTR:
         case TOKEN_END_OF_FILE:
             StartComment(row);
             row.append(token.Lexeme());
@@ -197,6 +272,27 @@ void VM::Assemble()
             row.append(rhs.Lexeme());
             break;
         }
+
+        case TOKEN_CALL:
+        {
+            i++;
+            Token& rhs = m_bytecode[i];
+            std::string lex = rhs.Lexeme();
+            if (0 == m_stdlib_lookup.count(lex))
+            {
+                Error("Failed to find function: " + lex);
+                break;
+            }
+            int idx = m_stdlib_lookup.at(lex);
+            PushInstInt16(idx);
+            row.append(ToHex2(idx));
+
+            StartComment(row);
+            row.append(token.Lexeme());
+            PadComment(row, comment_param_offset);
+            row.append(rhs.Lexeme());
+            break;
+        }
         }
 
         row.append("\n");
@@ -211,6 +307,8 @@ void VM::Assemble()
         size_t to_addr = m_pp_labels[jmp.to_label];
         SetInstInt(from_addr, to_addr);
     }
+
+    m_asm.append("\Instruction Load: " + std::to_string(INST_PTR) + "/" + std::to_string(MEM_INST_SZ) + " (" + std::to_string(int(INST_PTR * 100 / float(MEM_INST_SZ))) + "%)\n");
 }
 
 
@@ -222,5 +320,6 @@ std::string VM::Dump()
 
 void VM::Error(const std::string& err)
 {
-    m_errorHandler->Error("VM", INST_PTR, err);
+    m_errorHandler->Error("VM", INST_PTR - 1, err);
 }
+

@@ -27,12 +27,16 @@ public:
     TokenList Compile()
     {
         Bytecode bc;
+        Push(m_bytecode, Token(TOKEN_PUSH_SCRATCH_PTR, 0, ""));
+
         while (!IsAtEnd() && !m_errorHandler->HasErrors())
         {
             bc = Declaration();
             if (bc.empty()) break;
             Append(m_bytecode, bc);
         }
+
+        Push(m_bytecode, Token(TOKEN_POP_SCRATCH_PTR, 0, ""));
         Push(m_bytecode, Token(TOKEN_END_OF_FILE, 0, ""));
         return m_bytecode;
     }
@@ -46,39 +50,65 @@ public:
         return Statement();
     }
 
-    
+
     //-----------------------------------------------------------------------------
     Bytecode VarDeclaration()
     {
-        if (!Consume(TOKEN_IDENTIFIER, "Expected identifier.")) return Bytecode();
+        Bytecode ret;
+        TokenList ids;
 
-        Token id = Previous();
-        Bytecode stmt = Stmt::VarStmt(id, m_env);
-
-        if (Match(TOKEN_EQUAL))
+        while (true)
         {
-            Bytecode value = Addition();
-            Bytecode expr = Expr::AssignExpr(id, value, m_env);
-            Append(stmt, expr);
+            if (!Consume(TOKEN_IDENTIFIER, "Expected identifier.")) return Bytecode();
+
+            Token id = Previous();
+            ids.push_back(id);
+            Append(ret, Stmt::VarStmt(id, m_env));
+
+            if (!Check(TOKEN_COMMA)) break;
+            Advance();
         }
 
-        return stmt;
+        if (!Consume(TOKEN_EQUAL, "Expected assignment after variable declaration.")) return Bytecode();
+        
+        for (int i = 0; i < ids.size(); ++i)
+        {
+            Bytecode value = Addition();
+            if (value.empty()) return Bytecode();
+            Bytecode expr = Expr::AssignExpr(ids[i], value, m_env);
+            Append(ret, expr);
+            if (i < ids.size() - 1)
+            {
+                if (!Consume(TOKEN_COMMA, "Expected comma.")) return Bytecode();
+            }
+        }
+
+        return ret;
     }
 
 
     //-----------------------------------------------------------------------------
     Bytecode Statement()
     {
-        if (MatchVar(2, TOKEN_PRINT, TOKEN_PRINTLN)) return PrintStatement();
+        if (Match(TOKEN_LEFT_BRACE)) return BlockStatement();
+        if (Match(TOKEN_BREAK)) return Stmt::BreakStmt(Previous(), m_env);
+        if (Match(TOKEN_CONTINUE)) return Stmt::ContinueStmt(Previous(), m_env);
+        if (Match(TOKEN_FOR)) return ForStatement();
         if (Match(TOKEN_IF)) return IfStatement();
-        if (Match(TOKEN_LEFT_BRACE)) return Stmt::BlockStmt(BlockStatement(), m_env);
+        if (Match(TOKEN_LOOP)) return LoopStatement();
+        if (MatchVar(2, TOKEN_PRINT, TOKEN_PRINTLN)) return PrintStatement();
+        if (Match(TOKEN_WHILE)) return WhileStatement();
 
         return ExpressionStatement();
     }
 
+
     //-----------------------------------------------------------------------------
     Bytecode BlockStatement()
     {
+
+        m_env = Environment::Push();
+
         Bytecode ret;
         while (!Check(TOKEN_RIGHT_BRACE) && !IsAtEnd() && !m_errorHandler->HasErrors())
         {
@@ -86,9 +116,80 @@ public:
             Append(ret, stmt);
         }
 
+        m_env = Environment::Pop();
+
         Consume(TOKEN_RIGHT_BRACE, "Expected '}' after block.");
         return ret;
     }
+
+
+    //-----------------------------------------------------------------------------
+    Bytecode ForStatement()
+    {
+        if (!Consume(TOKEN_IDENTIFIER, "Expected identifier.")) return Bytecode();
+        Token id = Previous();
+
+        if (!Consume(TOKEN_IN, "Expected 'in'.")) return Bytecode();
+
+        Bytecode lhs = Addition(); // lhs of range
+
+        if (!MatchVar(2, TOKEN_DOT_DOT, TOKEN_DOT_DOT_EQUAL))
+        {
+            Error(Previous(), "Expected range.");
+            return Bytecode();
+        }
+        
+        Token oper = Previous();
+        Bytecode one = Expr::LiteralExpr(Token(TOKEN_INTEGER, "1", 1, 1, oper.Line(), oper.Filename()));
+
+        Bytecode rhs = Addition(); // rhs of range
+        if (oper.GetType() == TOKEN_DOT_DOT_EQUAL)
+        {
+            // if ..= then add one to rhs
+            rhs = Expr::BinaryExpr(rhs, Token(TOKEN_PLUS, oper.Line(), oper.Filename()), one);                
+        }
+        
+        if (!Check(TOKEN_LEFT_BRACE))
+        {
+            Error(oper, "Expected '{' after while condition.");
+            return Bytecode();
+        }
+
+        std::string postLabel = m_env->NewLabel("post");
+        std::string mergeLabel = m_env->NewLabel("merge");
+
+        Bytecode ret;
+        m_env = Environment::Push();
+        Push(ret, Token(TOKEN_PUSH_SCRATCH_PTR, oper.Line(), oper.Filename()));
+
+        Token loop_end = Token(TOKEN_IDENTIFIER, "__loop_end", oper.Line(), oper.Filename());
+
+        Stmt::VarStmt(id, m_env);
+        Stmt::VarStmt(loop_end, m_env);
+
+        // init before the loop
+        Append(ret, Expr::AssignExpr(id, lhs, m_env));
+        Append(ret, Expr::AssignExpr(loop_end, rhs, m_env));
+        
+        // lhs < rhs
+        Bytecode condition = Expr::BinaryExpr(Expr::VariableExpr(id, m_env), Token(TOKEN_LESS, oper.Line(), oper.Filename()), Expr::VariableExpr(loop_end, m_env));
+
+        m_env->PushLoopBreakContinue(mergeLabel, postLabel);
+        Bytecode body = Statement();
+        m_env->PopLoopBreakContinue();
+
+        // build post increment
+        Bytecode inc = Expr::BinaryExpr(Expr::VariableExpr(id, m_env), Token(TOKEN_PLUS, oper.Line(), oper.Filename()), one);
+        Bytecode post = Expr::AssignExpr(id, inc, m_env);
+
+        Append(ret, Stmt::WhileStmt(oper, condition, body, post, postLabel, mergeLabel, m_env));
+        
+        Push(ret, Token(TOKEN_POP_SCRATCH_PTR, oper.Line(), oper.Filename()));
+        m_env = Environment::Pop();
+
+        return ret;
+    }
+
 
     //-----------------------------------------------------------------------------
     Bytecode IfStatement()
@@ -113,16 +214,44 @@ public:
                 }
                 else
                 {
-                    Error(Previous(), "Expected '{' or ':' after else condition.");
+                    Error(Previous(), "Expected '{' after else condition.");
                 }
             }
             return Stmt::IfStmt(token, condition, thenBranch, elseBranch, m_env);
         }
         else
         {
-            Error(token, "Expected '{' or ':' after if condition.");
+            Error(token, "Expected '{' after if condition.");
         }
         
+        return Bytecode();
+    }
+
+
+    //-----------------------------------------------------------------------------
+    Bytecode LoopStatement()
+    {
+        Token prev = Previous();
+        Bytecode condition = Expr::LiteralExpr(Token(TOKEN_TRUE, prev.Line(), prev.Filename()));
+        
+        if (Check(TOKEN_LEFT_BRACE))
+        {
+            std::string postLabel = m_env->NewLabel("post");
+            std::string mergeLabel = m_env->NewLabel("merge");
+
+            m_env->PushLoopBreakContinue(mergeLabel, postLabel);
+            Bytecode body = Statement();
+            m_env->PopLoopBreakContinue();
+            
+            Bytecode post;
+
+            return Stmt::WhileStmt(prev, condition, body, post, postLabel, mergeLabel, m_env);
+        }
+        else
+        {
+            Error(Previous(), "Expected '{' after loop statement.");
+        }
+
         return Bytecode();
     }
 
@@ -142,6 +271,33 @@ public:
                 return Stmt::PrintStmt(expr, prev);
             }
         }
+        return Bytecode();
+    }
+
+    
+    //-----------------------------------------------------------------------------
+    Bytecode WhileStatement()
+    {
+        Token prev = Previous();
+        Bytecode condition = Expression();
+
+        if (Check(TOKEN_LEFT_BRACE))
+        {
+            std::string postLabel = m_env->NewLabel("post");
+            std::string mergeLabel = m_env->NewLabel("merge");
+
+            m_env->PushLoopBreakContinue(mergeLabel, postLabel);
+            Bytecode body = Statement();
+            m_env->PopLoopBreakContinue();
+
+            Bytecode post;
+            return Stmt::WhileStmt(prev, condition, body, post, postLabel, mergeLabel, m_env);
+        }
+        else
+        {
+            Error(Previous(), "Expected '{' after while condition.");
+        }
+
         return Bytecode();
     }
 
@@ -275,9 +431,21 @@ public:
     //-----------------------------------------------------------------------------
     Bytecode As()
     {
-        // todo
-
-        return Unary();
+        Bytecode lhs = Unary();
+        while (Match(TOKEN_AS))
+        {
+            if (MatchVar(3, TOKEN_VAR_INT, TOKEN_VAR_FLOAT, TOKEN_VAR_STRING))
+            {
+                Token oper = Previous();
+                lhs = Expr::AsExpr(lhs, oper);
+            }
+            else
+            {
+                Error(Previous(), "Expected variable type after 'as'.");
+                return Bytecode();
+            }
+        }
+        return lhs;
     }
 
     
@@ -298,12 +466,9 @@ public:
     //-----------------------------------------------------------------------------
     Bytecode Primary()
     {
-        if (Match(TOKEN_FALSE)) return Expr::LiteralExpr(Previous(), false);
-        if (Match(TOKEN_TRUE)) return Expr::LiteralExpr(Previous(), true);
-        if (Match(TOKEN_FLOAT)) return Expr::LiteralExpr(Previous(), Previous().DoubleValue());
-        if (Match(TOKEN_INTEGER)) return Expr::LiteralExpr(Previous(), Previous().IntValue());
+        if (MatchVar(4, TOKEN_TRUE, TOKEN_FALSE, TOKEN_FLOAT, TOKEN_INTEGER)) return Expr::LiteralExpr(Previous());
         if (Match(TOKEN_STRING)) return Expr::LiteralExpr(Previous(), Previous().StringValue(), m_env);
-        if (Match(TOKEN_PI)) return Expr::LiteralExpr(Previous(), acos(-1));
+        if (Match(TOKEN_PI)) return Expr::LiteralExpr(Token(TOKEN_FLOAT, "pi", acos(-1), acos(-1), Previous().Line(), Previous().Filename()));
 
         if (Match(TOKEN_LEFT_PAREN))
         {
@@ -314,13 +479,41 @@ public:
 
         if (Match(TOKEN_IDENTIFIER))
         {
-            Token prev = Previous();
-            std::string name = prev.Lexeme();
-            Bytecode expr = Expr::VariableExpr(prev, m_env);
-            return expr;
+            Token name = Previous();
+            
+            if (Match(TOKEN_LEFT_PAREN))
+            {
+                // function call
+                return FinishCall(name);
+            }
+            else
+            {
+                // load variable
+                return Expr::VariableExpr(name, m_env);
+            }
         }
 
         return Bytecode();
+    }
+
+
+    //-----------------------------------------------------------------------------
+    Bytecode FinishCall(Token callee)
+    {
+        Bytecode params;        
+        
+        if (!Check(TOKEN_RIGHT_PAREN))
+        {
+            // push arguments to the param stack
+            do
+            {
+                Append(params, Expression());
+            } while (Match(TOKEN_COMMA));
+        }
+
+        if (!Consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.")) return Bytecode();
+        
+        return Expr::CallExpr(params, callee);
     }
 
 private:

@@ -12,6 +12,7 @@ std::map<std::string, TokenTypeEnum> Token::GetKeywords()
 void Token::Initialize()
 {
     // single character tokens.
+    MapTokenLex(TOKEN_COMMA, ",");
     MapTokenLex(TOKEN_MINUS, "-");
     MapTokenLex(TOKEN_HAT, "^");
     MapTokenLex(TOKEN_PLUS, "+");
@@ -24,6 +25,7 @@ void Token::Initialize()
     MapTokenLex(TOKEN_RIGHT_PAREN, ")");
     MapTokenLex(TOKEN_LEFT_BRACE, "{");
     MapTokenLex(TOKEN_RIGHT_BRACE, "}");
+    
 
     // two character tokens
     MapTokenLex(TOKEN_BANG_EQUAL, "!=");
@@ -34,6 +36,8 @@ void Token::Initialize()
     MapTokenLex(TOKEN_LESS_EQUAL, "<=");
     MapTokenLex(TOKEN_AND, "&&");
     MapTokenLex(TOKEN_OR, "||");
+    MapTokenLex(TOKEN_DOT_DOT, "..");
+    MapTokenLex(TOKEN_DOT_DOT_EQUAL, "..=");
     
     // literals
     MapTokenLex(TOKEN_IDENTIFIER, "");
@@ -65,11 +69,22 @@ void Token::Initialize()
     //
     MapTokenLex(TOKEN_PI, "pi");
     //
+    MapTokenLex(TOKEN_AS, "as");
+    MapTokenLex(TOKEN_BREAK, "break");
+    MapTokenLex(TOKEN_CONTINUE, "continue");
+    //MapTokenLex(TOKEN_ENUM, "enum");
+    MapTokenLex(TOKEN_FOR, "for");
     MapTokenLex(TOKEN_IF, "if");
+    MapTokenLex(TOKEN_IN, "in");
     MapTokenLex(TOKEN_ELSE, "else");
+    MapTokenLex(TOKEN_LOOP, "loop");
     MapTokenLex(TOKEN_PRINT, "print");
     MapTokenLex(TOKEN_PRINTLN, "println");
     MapTokenLex(TOKEN_VAR, "var");
+    MapTokenLex(TOKEN_VAR_INT, "int");
+    MapTokenLex(TOKEN_VAR_FLOAT, "float");
+    MapTokenLex(TOKEN_VAR_STRING, "string");
+    MapTokenLex(TOKEN_WHILE, "while");
 
     /*
     MapTokenLex(TOKEN_ABS, "abs");
@@ -123,53 +138,30 @@ void Token::Initialize()
     MapTokenLex(TOKEN_REDIM, "redim");
     MapTokenLex(TOKEN_VAR, "var");
     //
-    MapTokenLex(TOKEN_CLEAR, "clr");
-    MapTokenLex(TOKEN_P_CLEAR, "pclr");
-    MapTokenLex(TOKEN_T_CLEAR, "tclr");
-    MapTokenLex(TOKEN_V_CLEAR, "vclr");
-    //
-    MapTokenLex(TOKEN_DUMP, "dump");
-    MapTokenLex(TOKEN_PRINT, "print");
-    MapTokenLex(TOKEN_PRINTLN, "println");
-    //
-    MapTokenLex(TOKEN_BREAK, "break");
-    MapTokenLex(TOKEN_CONTINUE, "continue");
-    MapTokenLex(TOKEN_FOR, "for");
-    MapTokenLex(TOKEN_ENDFOR, "endfor");
-    MapTokenLex(TOKEN_ITER, "iter");
-    MapTokenLex(TOKEN_ENDITER, "enditer");
-    MapTokenLex(TOKEN_LOOP, "loop");
-    MapTokenLex(TOKEN_ENDLOOP, "endloop");
-    MapTokenLex(TOKEN_I, "i");
-    MapTokenLex(TOKEN_J, "j");
-    MapTokenLex(TOKEN_K, "k");
-    //
-    MapTokenLex(TOKEN_IF, "if");
-    MapTokenLex(TOKEN_ELSE, "else");
-    MapTokenLex(TOKEN_ENDIF, "endif");
-    MapTokenLex(TOKEN_AND, "and");
-    MapTokenLex(TOKEN_OR, "or");
-    MapTokenLex(TOKEN_NOT, "not");
-    MapTokenLex(TOKEN_FALSE, "false");
-    MapTokenLex(TOKEN_TRUE, "true");
-    //
-    
     */
     
 
 
     // low level language tokens
+    MapTokenLex(TOKEN_CALL, "call");
+    MapTokenLex(TOKEN_CAST_FLOAT, "castf");
+    MapTokenLex(TOKEN_CAST_INT, "casti");
+    MapTokenLex(TOKEN_CAST_STRING, "caststr");
+    MapTokenLex(TOKEN_INV, "inv");
+    MapTokenLex(TOKEN_JMP, "jmp");
     MapTokenLex(TOKEN_LABEL, "label");
     MapTokenLex(TOKEN_LOAD_BOOL, "loadb");
     MapTokenLex(TOKEN_LOAD_FLOAT, "loadf");
     MapTokenLex(TOKEN_LOAD_INT, "loadi");
     MapTokenLex(TOKEN_LOAD_VAR, "loadvar");
     MapTokenLex(TOKEN_LOAD_STRING, "loadstr");
-    MapTokenLex(TOKEN_INV, "inv");
-    MapTokenLex(TOKEN_JMP, "jmp");
     MapTokenLex(TOKEN_NEG, "neg");
     MapTokenLex(TOKEN_STORE_VAR, "storevar");
+    MapTokenLex(TOKEN_PUSH_SCRATCH_PTR, "pushscrp");
+    MapTokenLex(TOKEN_POP_SCRATCH_PTR, "popscrp");
+    MapTokenLex(TOKEN_PRINT_BLANK, "prntblank");
     
+
     MapTokenLex(TOKEN_NOOP, "noop");
     MapTokenLex(TOKEN_LN, "\n");
 
