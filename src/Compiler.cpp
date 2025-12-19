@@ -3,6 +3,7 @@
 
 #include <cstdarg>
 
+ErrorHandler* Compiler::m_errorHandler = nullptr;
 
 Token Compiler::Advance()
 {
@@ -210,7 +211,7 @@ void Compiler::PushNoop(IRCode& lhs)
     Push(lhs, Token(TOKEN_NOOP, 0, ""));
     PushLn(lhs);
 }
-
+/*
 void Compiler::PushBlockStart(IRCode& lhs, Token oper)
 {
     Push(lhs, Token(TOKEN_BLOCK_START, oper.Line(), oper.Filename()));
@@ -221,4 +222,4 @@ void Compiler::PushBlockEnd(IRCode& lhs, Token oper)
 {
     Push(lhs, Token(TOKEN_BLOCK_END, oper.Line(), oper.Filename()));
     PushLn(lhs);
-}
+}*/

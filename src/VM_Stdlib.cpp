@@ -4,7 +4,7 @@
 #include "Stdlib.h"
 
 
-int VM::GetStdlibAddr(std::string name)
+int VM::GetFuncAddr(std::string name)
 {
     if (0 == m_instance->m_stdlib_lookup.count(name)) return -1;
     return m_instance->m_stdlib_lookup.at(name);
@@ -14,20 +14,32 @@ void VM::LoadStdlib()
 {
     // register standard library functions
     RegisterFunc("%randi", 2, [this]() {
-        uint8_t rhs_type = PopParamType();
         int rhs = PopParamInt();
-        uint8_t lhs_type = PopParamType();
         int lhs = PopParamInt();
         int ret = __rand_range_impl(lhs, rhs);
         PushParamInt(ret);
         }
     );
 
-    // register standard library functions
     RegisterFunc("%input", 0, [this]() {
         std::string str = console_input();
         int addr = NewScratchString(str);
         PushParamString(addr);
+        }
+    );
+
+    RegisterFunc("%new", 0, [this]() {
+        int type = PeekParamType();
+        if (type == PARAM_LIST)
+        {
+            int addr = HeapNewList(PopParamPointer());
+            PushParamList(addr);
+        }
+        else if (type == PARAM_STRING)
+        {
+            int addr = HeapNewString(PopParamPointer());
+            PushParamString(addr);
+        }
         }
     );
 

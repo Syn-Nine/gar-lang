@@ -3,6 +3,7 @@
 #include "Compiler.h"
 
 
+//-----------------------------------------------------------------------------
 IRCode Stmt::BreakStmt(Token oper, Environment* env)
 {
     IRCode ret;
@@ -11,14 +12,45 @@ IRCode Stmt::BreakStmt(Token oper, Environment* env)
 }
 
 
+//-----------------------------------------------------------------------------
 IRCode Stmt::ContinueStmt(Token oper, Environment* env)
 {
     IRCode ret;
+    // unwind frame pointer to cached location at start of the loop
+    //Token loop_fptr = Token(TOKEN_IDENTIFIER, "__loop_fptr", oper.Line(), oper.Filename());
+    //Compiler::Append(ret, Expr::VariableExpr(loop_fptr, env));
+    //Compiler::Push(ret, Token(TOKEN_STORE_FPTR, oper.Line(), oper.Filename()));
     Compiler::PushJmp(ret, env->GetParentLoopContinue());
     return ret;
 }
 
 
+//-----------------------------------------------------------------------------
+IRCode Stmt::FunctionStmt(Token name, int arity, IRCode body, Environment* env)
+{
+    std::string lex = name.Lexeme();
+    
+    std::string entryLabel = "__def_" + lex + "_entry";
+    std::string tailLabel = "__def_" + lex + "_tail";
+
+    // prototype
+    IRCode proto;
+    Compiler::PushLabel(proto, entryLabel);
+    
+    // tail
+    Compiler::PushJmp(body, tailLabel);
+    Compiler::PushLabel(body, tailLabel);
+    Compiler::Push(body, Token(TOKEN_RET, name.Line(), name.Filename()));
+
+    env->DefineFunction("%" + lex, arity, entryLabel, tailLabel, proto, body);
+
+    IRCode ret;
+    Compiler::PushNoop(ret);
+    return ret;
+}
+
+
+//-----------------------------------------------------------------------------
 IRCode Stmt::IfStmt(Token oper, IRCode condition, IRCode thenBranch, IRCode elseBranch, Environment* env)
 {
     IRCode ret;
@@ -44,6 +76,7 @@ IRCode Stmt::IfStmt(Token oper, IRCode condition, IRCode thenBranch, IRCode else
 }
 
 
+//-----------------------------------------------------------------------------
 IRCode Stmt::PrintStmt(IRCode expr, Token oper)
 {
     IRCode ret;
@@ -58,7 +91,8 @@ IRCode Stmt::PrintStmt(IRCode expr, Token oper)
 }
 
 
-IRCode Stmt::VarStmt(Token oper, Environment* env)
+//-----------------------------------------------------------------------------
+IRCode Stmt::VarStmt(Token oper, Environment* env, bool is_const /* = false */)
 {
     std::string lex = oper.Lexeme();
     
@@ -67,17 +101,18 @@ IRCode Stmt::VarStmt(Token oper, Environment* env)
 
     if (env->IsGlobal())
     {
-        env->DefineGlobalVariable(lex);
+        env->DefineGlobalVariable(lex, is_const);
     }
     else
     {
-        env->DefineLocalVariable(lex);
+        env->DefineLocalVariable(lex, is_const);
     }
 
     return ret;
 }
 
 
+//-----------------------------------------------------------------------------
 IRCode Stmt::WhileStmt(Token oper, IRCode condition, IRCode body, IRCode post, std::string postLabel, std::string mergeLabel, Environment* env)
 {
     IRCode ret;

@@ -4,16 +4,18 @@
 
 VM* VM::m_instance = nullptr;
 
-void VM::Execute(uint8_t* bytecode)
+void VM::Execute(uint8_t* bytecode, size_t heap_addr, size_t entry_addr)
 {
     // load bytecode into VM memory
     memcpy(m_memory.block, bytecode, MEM_BLOCK_SZ);
 
-    INST_PTR = 0;
+    INST_PTR = entry_addr;
     PARAM_PTR = MEM_PARAM_START;
     FRAME_BASE_PTR = MEM_BLOCK_SZ - 1;
     FRAME_PTR = FRAME_BASE_PTR;
-    BLOCK_BASE_PTR = FRAME_PTR;
+    //BLOCK_BASE_PTR = FRAME_PTR;
+    SCRATCH_PTR = MEM_SCRATCH_START;
+    HEAP_PTR = heap_addr;
 
     //
     
@@ -34,16 +36,17 @@ void VM::Execute(uint8_t* bytecode)
         switch (inst)
         {
         case TOKEN_ALLOCA: Alloca(); break;
-        case TOKEN_BLOCK_START: BlockStart(); break;
-        case TOKEN_BLOCK_END: BlockEnd(); break;
+        case TOKEN_LOAD_AT: LoadAt(); break;
         case TOKEN_LOAD_BOOL: LoadBool(); break;
         case TOKEN_LOAD_INT: LoadInt(); break;
         case TOKEN_LOAD_FLOAT: LoadFloat(); break;
         case TOKEN_LOAD_STRING: LoadString(); break;
         case TOKEN_LOAD_VAR: LoadVar(); break;
+        case TOKEN_MAKE_LIST: MakeList(); break;
+        case TOKEN_STORE_AT: StoreAt(); break;
         case TOKEN_STORE_VAR: StoreVar(); break;
         case TOKEN_MINUS: // intentional fall-through
-        case TOKEN_HAT: 
+        case TOKEN_HAT:
         case TOKEN_PLUS: 
         case TOKEN_SLASH:
         case TOKEN_STAR:
@@ -71,6 +74,8 @@ void VM::Execute(uint8_t* bytecode)
         case TOKEN_IF: IfJmp(); break;
         case TOKEN_JMP: Jmp(); break;
         case TOKEN_CALL: Call(); break;
+        case TOKEN_CALL_DEF: CallDef(); break;
+        case TOKEN_RET: Ret(); break;
         default:
             Error("Bytecode not handled: " + std::to_string(inst));
             quit = true;
@@ -89,7 +94,7 @@ void VM::Execute(uint8_t* bytecode)
         int cc = 0;
         while (PARAM_PTR > MEM_PARAM_START)
         {
-            uint8_t type = PopParamType();
+            uint8_t type = PeekParamType();
             if (PARAM_BOOL == type)
             {
                 bool val = PopParamBool();
@@ -108,9 +113,15 @@ void VM::Execute(uint8_t* bytecode)
             }
             else if (PARAM_STRING == type)
             {
-                int addr = PeekParamInt();
-                std::string str = PopParamString();
+                int addr;
+                std::string str = PopParamString(&addr);
                 printf("%d: STRING: @%d=\"%s\"\n", cc, addr, str.c_str());
+            }
+            else if (PARAM_LIST == type)
+            {
+                int addr = PopParamList();
+                int count = PeekScratchInt16(addr);
+                printf("%d: List[%d]: @%d\n", cc, count, addr);
             }
             cc++;
         }
@@ -126,53 +137,39 @@ void VM::Alloca()
 }
 
 
-void VM::BlockStart()
+void VM::LoadAt()
 {
-    // push the previous block base pointer to the frame stack
-    //printf("block start: %d\n", BLOCK_BASE_PTR);
-    PushFrameInt(BLOCK_BASE_PTR);
-    
-    // set the block base pointer to this address
-    // this is where variable allocations will start
-    // and where local block memory will unwind to
-    BLOCK_BASE_PTR = FRAME_PTR;
-    //printf("BLOCK_BASE_PTR = FRAME_PTR = %d\n", FRAME_PTR);
-}
-
-void VM::BlockEnd()
-{
-    // unwind the frame pointer to the block base location
-    //printf("block end\n");
-    //printf("FRAME_PTR = BLOCK_BASE_PTR, %d = %d\n", FRAME_PTR, BLOCK_BASE_PTR);
-    FRAME_PTR = BLOCK_BASE_PTR;
-    
-    // pop the previous base off the frame stack
-    BLOCK_BASE_PTR = PopFrameInt();
-    //printf("BLOCK_BASE_PTR = %d\n", BLOCK_BASE_PTR);
+    int at = PopParamInt();
+    int addr = PopParamList();
+    PushParamAt(addr, at);
 }
 
 void VM::LoadBool()
 {
+    m_memory.param_cnt++;
     m_memory.block[++PARAM_PTR] = m_memory.block[INST_PTR++];
-    PushParamType(PARAM_BOOL);
+    m_memory.block[++PARAM_PTR] = PARAM_BOOL;
 }
 
 void VM::LoadFloat()
 {
+    m_memory.param_cnt++;
     PushParamInst4();
-    PushParamType(PARAM_FLOAT);
+    m_memory.block[++PARAM_PTR] = PARAM_FLOAT;
 }
 
 void VM::LoadString()
 {
+    m_memory.param_cnt++;
     PushParamInst4();
-    PushParamType(PARAM_STRING);
+    m_memory.block[++PARAM_PTR] = PARAM_STRING;
 }
 
 void VM::LoadInt()
 {
+    m_memory.param_cnt++;
     PushParamInst4();
-    PushParamType(PARAM_INT);
+    m_memory.block[++PARAM_PTR] = PARAM_INT;
 }
 
 void VM::LoadVar()
@@ -181,11 +178,27 @@ void VM::LoadVar()
     PushParamVar(idx);
 }
 
+void VM::MakeList()
+{
+    int count = ReadInstInt16();
+    int addr = PushScratchList(count);
+    PushParamList(addr);
+}
+
+
+void VM::StoreAt()
+{
+    int at = PopParamInt();
+    int addr = PopParamList();
+    PopParamAt(addr, at);
+}
+
 void VM::StoreVar()
 {
     int idx = ReadInstInt();
     PopParamVar(idx);
 }
+
 
 void VM::PushParamInst4()
 {
@@ -203,7 +216,7 @@ void VM::BinaryOp(TokenTypeEnum oper)
     std::string srhs;
     std::string slhs;
 
-    uint8_t rhs_type = PopParamType();
+    uint8_t rhs_type = PeekParamType();
     if (PARAM_FLOAT == rhs_type)
     {
         isfloat = true;
@@ -218,8 +231,13 @@ void VM::BinaryOp(TokenTypeEnum oper)
     {
         srhs = PopParamString();
     }
+    else
+    {
+        Error("Invalid rhs parameter type for boolean operation.");
+        return;
+    }
 
-    uint8_t lhs_type = PopParamType();
+    uint8_t lhs_type = PeekParamType();
     if (PARAM_FLOAT == lhs_type)
     {
         isfloat = true;
@@ -233,6 +251,11 @@ void VM::BinaryOp(TokenTypeEnum oper)
     else if (PARAM_STRING == lhs_type)
     {
         slhs = PopParamString();
+    }
+    else
+    {
+        Error("Invalid lhs parameter type for boolean operation.");
+        return;
     }
 
     if (rhs_type == PARAM_STRING || lhs_type == PARAM_STRING)
@@ -274,7 +297,7 @@ void VM::BinaryOp(TokenTypeEnum oper)
 
 void VM::AndOr(TokenTypeEnum oper)
 {
-    uint8_t rhs_type = PopParamType();
+    uint8_t rhs_type = PeekParamType();
     if (PARAM_BOOL != rhs_type)
     {
         Error("AndOr parameter is not boolean.");
@@ -283,7 +306,7 @@ void VM::AndOr(TokenTypeEnum oper)
     bool rval = PopParamBool();
     
 
-    uint8_t lhs_type = PopParamType();
+    uint8_t lhs_type = PeekParamType();
     if (PARAM_BOOL != lhs_type)
     {
         Error("AndOr parameter is not boolean.");
@@ -309,7 +332,7 @@ void VM::ComparisonOp(TokenTypeEnum oper)
     std::string srhs;
     std::string slhs;
 
-    uint8_t rhs_type = PopParamType();
+    uint8_t rhs_type = PeekParamType();
     if (PARAM_FLOAT == rhs_type)
     {
         isfloat = true;
@@ -330,7 +353,7 @@ void VM::ComparisonOp(TokenTypeEnum oper)
         srhs = PopParamString();
     }
 
-    uint8_t lhs_type = PopParamType();
+    uint8_t lhs_type = PeekParamType();
     if (PARAM_FLOAT == lhs_type)
     {
         isfloat = true;
@@ -414,7 +437,7 @@ void VM::ComparisonOp(TokenTypeEnum oper)
 
 void VM::Negate()
 {
-    uint8_t rhs_type = PopParamType();
+    uint8_t rhs_type = PeekParamType();
     if (PARAM_FLOAT == rhs_type)
     {
         float val = -PopParamFloat();
@@ -430,7 +453,7 @@ void VM::Negate()
 
 void VM::Invert()
 {
-    uint8_t rhs_type = PopParamType();
+    uint8_t rhs_type = PeekParamType();
     if (PARAM_BOOL != rhs_type)
     {
         Error("Inv parameter is not boolean.");
@@ -452,7 +475,7 @@ void VM::Print(bool newline)
         return;
     }
 
-    uint8_t rhs_type = PopParamType();
+    uint8_t rhs_type = PeekParamType();
     if (PARAM_BOOL == rhs_type)
     {
         bool val = PopParamBool();
@@ -474,6 +497,41 @@ void VM::Print(bool newline)
         std::string str = PopParamString();
         printf("%s", str.c_str());
     }
+    else if (PARAM_LIST == rhs_type)
+    {
+        printf("[");
+        int addr = PopParamList();
+        int len = PeekScratchInt16(addr);
+        uint8_t* data = m_memory.block;
+        addr -= 5;
+        for (int i = 0; i < len; ++i)
+        {
+            int type = data[addr];
+            if (PARAM_BOOL == type)
+            {
+                m_memory.block[++PARAM_PTR] = data[addr + 1];
+            }
+            else
+            {
+                m_memory.block[++PARAM_PTR] = data[addr + 4];
+                m_memory.block[++PARAM_PTR] = data[addr + 3];
+                m_memory.block[++PARAM_PTR] = data[addr + 2];
+                m_memory.block[++PARAM_PTR] = data[addr + 1];
+            }
+            m_memory.block[++PARAM_PTR] = type;
+            if (PARAM_STRING == type)
+            {
+                printf("\""); VM::Print(false); printf("\"");
+            }
+            else
+            {
+                VM::Print(false); // recursive popping and printing
+            }
+            if (i < len - 1) printf(", ");
+            addr -= 5;
+        }
+        printf("]");
+    }
     else
     {
         Error("Parameter type not recognized.");
@@ -485,7 +543,7 @@ void VM::Print(bool newline)
 
 void VM::IfJmp()
 {
-    uint8_t rhs_type = PopParamType();
+    uint8_t rhs_type = PeekParamType();
     if (PARAM_BOOL != rhs_type)
     {
         Error("If parameter is not boolean.");
@@ -522,12 +580,27 @@ void VM::Call()
     m_stdlib[addr].ftn();
 }
 
+void VM::CallDef()
+{
+    int addr = ReadInstInt16();
+    PushFrameInt(INST_PTR);
+    PushFrameInt(FRAME_BASE_PTR);
+    FRAME_BASE_PTR = FRAME_PTR;
+    INST_PTR = addr;
+}
+
+void VM::Ret()
+{
+    FRAME_PTR = FRAME_BASE_PTR;
+    FRAME_BASE_PTR = PopFrameInt();
+    INST_PTR = PopFrameInt();
+}
+
 void VM::ToFloat()
 {
     uint8_t rhs_type = PeekParamType();
     if (PARAM_FLOAT == rhs_type) return; // noop
 
-    PopParamType();
     if (PARAM_INT == rhs_type)
     {
         int val = PopParamInt();
@@ -549,7 +622,6 @@ void VM::ToInt()
     uint8_t rhs_type = PeekParamType();
     if (PARAM_INT == rhs_type) return; // noop
 
-    PopParamType();
     if (PARAM_FLOAT == rhs_type)
     {
         float val = PopParamFloat();
@@ -591,7 +663,6 @@ void VM::ToString()
     uint8_t rhs_type = PeekParamType();
     if (PARAM_STRING == rhs_type) return; // noop
 
-    PopParamType();
     if (PARAM_FLOAT == rhs_type)
     {
         float val = PopParamFloat();

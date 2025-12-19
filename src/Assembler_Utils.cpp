@@ -67,6 +67,6 @@ void Assembler::PadComment(std::string& row, int len)
 
 void Assembler::Error(const std::string& err)
 {
-    m_errorHandler->Error("VM", m_inst_ptr - 1, err);
+    m_errorHandler->Error("Assembler", m_inst_ptr - 1, err);
 }
 

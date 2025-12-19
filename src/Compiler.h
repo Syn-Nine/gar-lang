@@ -28,8 +28,9 @@ public:
     TokenList Compile()
     {
         IRCode bc;
-        PushBlockStart(m_IRCode, Token(TOKEN_BLOCK_START, 0, ""));
-
+        
+        PushLabel(m_IRCode, "__main");
+        
         while (!IsAtEnd() && !m_errorHandler->HasErrors())
         {
             bc = Declaration();
@@ -37,7 +38,6 @@ public:
             Append(m_IRCode, bc);
         }
 
-        PushBlockEnd(m_IRCode, Token(TOKEN_BLOCK_END, 0, ""));
         Push(m_IRCode, Token(TOKEN_END_OF_FILE, 0, ""));
         return m_IRCode;
     }
@@ -46,9 +46,98 @@ public:
     //-----------------------------------------------------------------------------
     IRCode Declaration()
     {
+        if (Match(TOKEN_DEF)) return Function();
+        if (Match(TOKEN_CONST)) return ConstDeclaration();
         if (Match(TOKEN_VAR)) return VarDeclaration();
 
         return Statement();
+    }
+
+
+    //-----------------------------------------------------------------------------
+    IRCode Function()
+    {
+        if (!Consume(TOKEN_IDENTIFIER, "Expected function name.")) return IRCode();
+        Token name = Previous();
+
+        if (m_env->SymbolDefined(name.Lexeme()))
+        {
+            Compiler::Error(name, "Symbol ready defined.");
+            return IRCode();
+        }
+
+
+        if (!Consume(TOKEN_LEFT_PAREN, "Expected '(' after function name.")) return IRCode();
+        TokenList params;
+        
+        if (!Check(TOKEN_RIGHT_PAREN))
+        {
+            do
+            {
+                if (Consume(TOKEN_IDENTIFIER, "Expect parameter name."))
+                {
+                    params.push_back(Previous());
+                }
+            } while (Match(TOKEN_COMMA));
+        }
+
+        if (!Consume(TOKEN_RIGHT_PAREN, "Expected ')' after parameters.")) return IRCode();
+        if (!Consume(TOKEN_LEFT_BRACE, "Expected '{' before function body.")) return IRCode();
+
+        m_env = Environment::Push();
+        m_env->SetParentFunction("%" + name.Lexeme());
+
+        IRCode body;
+        size_t arity = params.size();
+        for (int i = 0; i < arity; ++i)
+        {
+            Token& p = params[arity - i - 1];
+            Stmt::VarStmt(p, m_env);
+            body = Expr::AssignExpr(p, body, m_env);
+        }
+        
+        Append(body, BlockStatement());
+        IRCode ret = Stmt::FunctionStmt(name, params.size(), body, m_env);
+
+        m_env = Environment::Pop();
+
+        return ret;
+    }
+
+
+    //-----------------------------------------------------------------------------
+    IRCode ConstDeclaration()
+    {
+        IRCode ret;
+        TokenList ids;
+
+        while (true)
+        {
+            if (!Consume(TOKEN_IDENTIFIER, "Expected identifier.")) return IRCode();
+
+            Token id = Previous();
+            ids.push_back(id);
+            Append(ret, Stmt::VarStmt(id, m_env, true));
+
+            if (!Check(TOKEN_COMMA)) break;
+            Advance();
+        }
+
+        if (!Consume(TOKEN_EQUAL, "Expected assignment after variable declaration.")) return IRCode();
+
+        for (int i = 0; i < ids.size(); ++i)
+        {
+            IRCode value = Addition();
+            if (value.empty()) return IRCode();
+            IRCode expr = Expr::AssignExpr(ids[i], value, m_env, true);
+            Append(ret, expr);
+            if (i < ids.size() - 1)
+            {
+                if (!Consume(TOKEN_COMMA, "Expected comma.")) return IRCode();
+            }
+        }
+
+        return ret;
     }
 
 
@@ -71,7 +160,7 @@ public:
         }
 
         if (!Consume(TOKEN_EQUAL, "Expected assignment after variable declaration.")) return IRCode();
-        
+
         for (int i = 0; i < ids.size(); ++i)
         {
             IRCode value = Addition();
@@ -111,15 +200,13 @@ public:
         IRCode ret;
         
         m_env = Environment::Push();
-        PushBlockStart(ret, oper);
-
+        
         while (!Check(TOKEN_RIGHT_BRACE) && !IsAtEnd() && !m_errorHandler->HasErrors())
         {
             IRCode stmt = Declaration();
             Append(ret, stmt);
         }
 
-        PushBlockEnd(ret, oper);
         m_env = Environment::Pop();
 
         Consume(TOKEN_RIGHT_BRACE, "Expected '}' after block.");
@@ -144,7 +231,7 @@ public:
         }
         
         Token oper = Previous();
-        IRCode one = Expr::LiteralExpr(Token(TOKEN_INTEGER, "1", 1, 1, oper.Line(), oper.Filename()));
+        IRCode one = Expr::LiteralExpr(Token(TOKEN_INTEGER, "1", 1, 1, oper.Line(), oper.Filename()), m_env);
 
         IRCode rhs = Addition(); // rhs of range
         if (oper.GetType() == TOKEN_DOT_DOT_EQUAL)
@@ -164,17 +251,16 @@ public:
 
         IRCode ret;
         m_env = Environment::Push();
-        PushBlockStart(ret, oper);
-
+        
         Token loop_end = Token(TOKEN_IDENTIFIER, "__loop_end", oper.Line(), oper.Filename());
-
+        
         Stmt::VarStmt(id, m_env);
         Stmt::VarStmt(loop_end, m_env);
-
+        
         // init before the loop
         Append(ret, Expr::AssignExpr(id, lhs, m_env));
         Append(ret, Expr::AssignExpr(loop_end, rhs, m_env));
-        
+
         // lhs < rhs
         IRCode condition = Expr::BinaryExpr(Expr::VariableExpr(id, m_env), Token(TOKEN_LESS, oper.Line(), oper.Filename()), Expr::VariableExpr(loop_end, m_env));
 
@@ -188,7 +274,6 @@ public:
 
         Append(ret, Stmt::WhileStmt(oper, condition, body, post, postLabel, mergeLabel, m_env));
         
-        PushBlockEnd(ret, oper);
         m_env = Environment::Pop();
 
         return ret;
@@ -235,21 +320,23 @@ public:
     //-----------------------------------------------------------------------------
     IRCode LoopStatement()
     {
-        Token prev = Previous();
-        IRCode condition = Expr::LiteralExpr(Token(TOKEN_TRUE, prev.Line(), prev.Filename()));
+        Token oper = Previous();
+        IRCode condition = Expr::LiteralExpr(Token(TOKEN_TRUE, oper.Line(), oper.Filename()), m_env);
         
         if (Check(TOKEN_LEFT_BRACE))
         {
+            IRCode ret;
+            
             std::string postLabel = m_env->NewLabel("post");
             std::string mergeLabel = m_env->NewLabel("merge");
 
             m_env->PushLoopBreakContinue(mergeLabel, postLabel);
             IRCode body = Statement();
             m_env->PopLoopBreakContinue();
-            
-            IRCode post;
 
-            return Stmt::WhileStmt(prev, condition, body, post, postLabel, mergeLabel, m_env);
+            Append(ret, Stmt::WhileStmt(oper, condition, body, IRCode(), postLabel, mergeLabel, m_env));
+
+            return ret;
         }
         else
         {
@@ -282,11 +369,13 @@ public:
     //-----------------------------------------------------------------------------
     IRCode WhileStatement()
     {
-        Token prev = Previous();
+        Token oper = Previous();
         IRCode condition = Expression();
 
         if (Check(TOKEN_LEFT_BRACE))
         {
+            IRCode ret;
+            
             std::string postLabel = m_env->NewLabel("post");
             std::string mergeLabel = m_env->NewLabel("merge");
 
@@ -294,8 +383,9 @@ public:
             IRCode body = Statement();
             m_env->PopLoopBreakContinue();
 
-            IRCode post;
-            return Stmt::WhileStmt(prev, condition, body, post, postLabel, mergeLabel, m_env);
+            Append(ret, Stmt::WhileStmt(oper, condition, body, IRCode(), postLabel, mergeLabel, m_env));
+
+            return ret;
         }
         else
         {
@@ -317,6 +407,7 @@ public:
     IRCode Expression()
     {
         return Assignment();
+        //return Or();
     }
 
     //-----------------------------------------------------------------------------
@@ -470,9 +561,9 @@ public:
     //-----------------------------------------------------------------------------
     IRCode Primary()
     {
-        if (MatchVar(4, TOKEN_TRUE, TOKEN_FALSE, TOKEN_FLOAT, TOKEN_INTEGER)) return Expr::LiteralExpr(Previous());
+        if (MatchVar(5, TOKEN_TRUE, TOKEN_FALSE, TOKEN_FLOAT, TOKEN_INTEGER, TOKEN_ENUM)) return Expr::LiteralExpr(Previous(), m_env);
         if (Match(TOKEN_STRING)) return Expr::LiteralExpr(Previous(), Previous().StringValue(), m_env);
-        if (Match(TOKEN_PI)) return Expr::LiteralExpr(Token(TOKEN_FLOAT, "pi", acos(-1), acos(-1), Previous().Line(), Previous().Filename()));
+        if (Match(TOKEN_PI)) return Expr::LiteralExpr(Token(TOKEN_FLOAT, "pi", acos(-1), acos(-1), Previous().Line(), Previous().Filename()), m_env);
 
         if (Match(TOKEN_LEFT_PAREN))
         {
@@ -484,18 +575,65 @@ public:
         if (Match(TOKEN_IDENTIFIER))
         {
             Token name = Previous();
+
+            // function call
+            if (Match(TOKEN_LEFT_PAREN)) return FinishCall(name);
+
+            IRCode ret = Expr::VariableExpr(name, m_env);
+
+            // list access
+            while (Match(TOKEN_LEFT_BRACKET))
+            {
+                Token oper = Previous();
+                IRCode idx = Expression();
+                Append(ret, idx);
+                Consume(TOKEN_RIGHT_BRACKET, "Expect ']' after expression.");
+                if (Check(TOKEN_EQUAL))
+                {
+                    Advance();
+                    oper = Previous();
+                    IRCode rhs = Expression();
+                    Append(rhs, ret);
+                    Push(rhs, Token(TOKEN_STORE_AT, oper.Line(), oper.Filename()));
+                    ret = rhs;
+                }
+                else
+                {
+                    Push(ret, Token(TOKEN_LOAD_AT, oper.Line(), oper.Filename()));
+                }
+            }
             
-            if (Match(TOKEN_LEFT_PAREN))
-            {
-                // function call
-                return FinishCall(name);
-            }
-            else
-            {
-                // load variable
-                return Expr::VariableExpr(name, m_env);
-            }
+            return ret;
         }
+
+        // anonymous list
+        if (Match(TOKEN_LEFT_BRACKET))
+        {
+            Token oper = Previous();
+            
+            int counter = 0;
+            IRCode params;
+            // push items to the param stack
+            do
+            {
+                if (Check(TOKEN_RIGHT_BRACKET)) break; // to allow trailing comma
+                Append(params, Expression());
+                counter++;
+            } while (Match(TOKEN_COMMA));
+
+            if (!Consume(TOKEN_RIGHT_BRACKET, "Expect ']' after arguments.")) return IRCode();
+
+            if (65535 / 5 < counter)
+            {
+                Error(oper, "List too large.");
+                return IRCode();
+            }
+
+            Token count = Token(TOKEN_INTEGER, std::to_string(counter), counter, counter, oper.Line(), oper.Filename());
+            return Expr::ListExpr(params, count);
+        }
+
+        Error(Peek(), "Unexpected expression.");
 
         return IRCode();
     }
@@ -504,7 +642,8 @@ public:
     //-----------------------------------------------------------------------------
     IRCode FinishCall(Token callee)
     {
-        IRCode params;        
+        IRCode params;
+        int param_counter = 0;
         
         if (!Check(TOKEN_RIGHT_PAREN))
         {
@@ -512,11 +651,13 @@ public:
             do
             {
                 Append(params, Expression());
+                param_counter++;
             } while (Match(TOKEN_COMMA));
         }
 
         if (!Consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.")) return IRCode();
-        
+
+        std::string lex = "%" + callee.Lexeme();
         return Expr::CallExpr(params, callee);
     }
 
@@ -526,10 +667,10 @@ public:
     static void PushJmp(IRCode& lhs, std::string label);
     static void PushLabel(IRCode& lhs, std::string label);
     static void PushNoop(IRCode& lhs);
-    static void PushBlockStart(IRCode& lhs, Token oper);
-    static void PushBlockEnd(IRCode& lhs, Token oper);
-
+    
 private:
+
+    void Error(Token token, const std::string& err);
 
     Token Advance();
     bool Check(TokenTypeEnum tokenType);
@@ -542,10 +683,9 @@ private:
     bool MatchVar(int count, ...);
     Token Peek();
     Token Previous();
-    void Error(Token token, const std::string& err);
 
     Environment* m_env;
-    ErrorHandler* m_errorHandler;
+    static ErrorHandler* m_errorHandler;
     TokenList m_tokenList;
     TokenList m_IRCode;
     int m_current;

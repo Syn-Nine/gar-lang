@@ -13,7 +13,7 @@
 
 int main()
 {
-    const char* filename = "rps.g";
+    const char* filename = "tictactoe.g";
     char* code = LoadFileText(filename);
     if (!code) {
         printf("Failed to open source: %s\n", filename);
@@ -24,8 +24,8 @@ int main()
     ErrorHandler* errorHandler = new ErrorHandler();
     Token::Initialize();
 
-    Scanner scanner(code, errorHandler, filename, 1);
-    TokenList tokens = scanner.ScanTokens();
+    Scanner* scanner = new Scanner(code, errorHandler, filename, 1);
+    TokenList tokens = scanner->ScanTokens();
     if (errorHandler->HasErrors()) {
         printf("Scanner Error:\n");
         errorHandler->Print();
@@ -37,8 +37,8 @@ int main()
     printf("Input:\n%s\n\n", code);
 
     Environment* env = Environment::Push();
-    Compiler compiler(tokens, env, errorHandler);
-    TokenList ir = compiler.Compile();
+    Compiler* compiler = new Compiler(tokens, env, errorHandler);
+    TokenList ir = compiler->Compile();
     if (errorHandler->HasErrors()) {
         printf("Compiler Error:\n");
         errorHandler->Print();
@@ -48,11 +48,11 @@ int main()
     env = Environment::Pop();
     
     //printf("Compiler Output:\n%s\n\n", Token::Dump(ir).c_str());
-    VM vm(env, errorHandler);
+    VM* vm = new VM(env, errorHandler);
 
-    Assembler assembler(ir, env, errorHandler);
-    uint8_t* bytecode = assembler.Assemble();
-    printf("Assembler Output:\n%s\n", assembler.Dump().c_str());
+    Assembler* assembler = new Assembler(ir, env, errorHandler);
+    uint8_t* bytecode = assembler->Assemble();
+    printf("Assembler Output:\n%s\n", assembler->Dump().c_str());
     if (errorHandler->HasErrors()) {
         printf("Assembler Error:\n");
         errorHandler->Print();
@@ -60,7 +60,7 @@ int main()
         return 0;
     }
 
-    vm.Execute(bytecode);
+    vm->Execute(bytecode, assembler->GetHeapAddr(), assembler->GetEntryAddr());
     if (errorHandler->HasErrors()) {
         printf("Runtime Error:\n");
         errorHandler->Print();
@@ -68,6 +68,11 @@ int main()
         return 0;
     }
 
+    delete vm;
+    delete assembler;
+    delete compiler;
+    delete scanner;
+    delete errorHandler;
 
 
     std::getchar();
