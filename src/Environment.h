@@ -132,8 +132,15 @@ public:
         {
             m_enum_counter++;
             m_enum_map.insert(std::make_pair(name, m_enum_counter));
+            m_enumReflectMap.insert(std::make_pair(m_enum_counter, name));
         }
         return m_enum_map.at(name);
+    }
+
+    std::string GetEnumAsString(int val)
+    {
+        if (0 == m_enumReflectMap.count(val)) return "<Enum Invalid>";
+        return m_enumReflectMap.at(val);
     }
 
     size_t GetVariable(Token token, bool allow_const)
@@ -233,6 +240,7 @@ private:
     static std::set<std::string> m_static_strings;
     static std::map<std::string, size_t> m_enum_map;
     static size_t m_enum_counter;
+    static std::map<int, std::string> m_enumReflectMap;
 
     Environment* m_parent;
     static std::map<std::string, std::vector<Environment::var_s>> m_local_alloca;

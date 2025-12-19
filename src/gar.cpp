@@ -13,7 +13,7 @@
 
 int main()
 {
-    const char* filename = "tictactoe.g";
+    const char* filename = "unit_test.g";
     char* code = LoadFileText(filename);
     if (!code) {
         printf("Failed to open source: %s\n", filename);

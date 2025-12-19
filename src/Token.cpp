@@ -84,6 +84,7 @@ void Token::Initialize()
     MapTokenLex(TOKEN_IF, "if", true);
     MapTokenLex(TOKEN_IN, "in", true);
     MapTokenLex(TOKEN_ELSE, "else", true);
+    MapTokenLex(TOKEN_FILELINE, "FILELINE", true);
     MapTokenLex(TOKEN_LOOP, "loop", true);
     MapTokenLex(TOKEN_PRINT, "print", true);
     MapTokenLex(TOKEN_PRINTLN, "println", true);

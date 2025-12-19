@@ -178,3 +178,13 @@ Screenshot of Tic-Tac-Toe:
 
 ![t+43h tic-tac-toe](https://github.com/Syn-Nine/gar-lang/blob/T+43h/images/t+43h_tictactoe.png?raw=true)
 
+
+## T+47h: Raylib support, 2D Minigame, and more unit tests
+This update brings in raylib support so that I could remake my mini dual axis pong-like game Catfish Bouncer, where you use the mouse to bounce fish pellets to a cat to eat. The game experience is exactly the same as my previous ports to other languages, so I'm just including a gif of the Odin version below. A VM_Raylib.cpp file was added that has the stdlib functions for the bare minimum raylib functions needed for the game, like creating/closing the window, getting mouse input, colors, and drawing primitives.
+
+You can find a bunch of unit tests in [unit_test.g](https://github.com/Syn-Nine/gar-lang/blob/T+47h/unit_test.g?raw=true) covering basic types, casting, variable redefinition, logic, loops, math, lists, and functions. This is a more thorough, consolidated set of tests that I've been using for test-driven-development throughout this project. Through making these tests I realized that I hadn't implemented the ^ and % operators and found various bugs that were cleaned up. I also added a "len()" keyword to get the length of lists and strings. This essentially just returns the value of the int16 at the object address that contains the data length.
+
+GIF of Catfish Bouncer:
+
+![t+47h catfish bouncer gif](https://github.com/Syn-Nine/odin-mini-games/raw/main/2d-games/catfish/screenshots/catfish.gif)
+
