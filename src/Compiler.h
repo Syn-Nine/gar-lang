@@ -564,6 +564,14 @@ public:
         if (MatchVar(5, TOKEN_TRUE, TOKEN_FALSE, TOKEN_FLOAT, TOKEN_INTEGER, TOKEN_ENUM)) return Expr::LiteralExpr(Previous(), m_env);
         if (Match(TOKEN_STRING)) return Expr::LiteralExpr(Previous(), Previous().StringValue(), m_env);
         if (Match(TOKEN_PI)) return Expr::LiteralExpr(Token(TOKEN_FLOAT, "pi", acos(-1), acos(-1), Previous().Line(), Previous().Filename()), m_env);
+        if (Match(TOKEN_FILELINE))
+        {
+            std::string fileline = "File:" + Previous().Filename() + ", Line:" + std::to_string(Previous().Line());
+            Token token = Token(TOKEN_STRING,
+                fileline, fileline,
+                Previous().Line(), Previous().Filename());
+            return Expr::LiteralExpr(token, fileline, m_env);
+        }
 
         if (Match(TOKEN_LEFT_PAREN))
         {

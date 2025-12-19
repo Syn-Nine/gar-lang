@@ -117,21 +117,39 @@ void VM::PushParamVar(int idx)
     {
         // frame local variable
         int offset = FRAME_BASE_PTR + idx * 5;
-        m_memory.block[++PARAM_PTR] = m_memory.block[offset + 1];
-        m_memory.block[++PARAM_PTR] = m_memory.block[offset + 2];
-        m_memory.block[++PARAM_PTR] = m_memory.block[offset + 3];
-        m_memory.block[++PARAM_PTR] = m_memory.block[offset + 4];
-        m_memory.block[++PARAM_PTR] = m_memory.block[offset + 5];
+        int type = m_memory.block[offset + 5];
+        if (PARAM_BOOL == type)
+        {
+            m_memory.block[++PARAM_PTR] = m_memory.block[offset + 4];
+            m_memory.block[++PARAM_PTR] = type;
+        }
+        else
+        {
+            m_memory.block[++PARAM_PTR] = m_memory.block[offset + 1];
+            m_memory.block[++PARAM_PTR] = m_memory.block[offset + 2];
+            m_memory.block[++PARAM_PTR] = m_memory.block[offset + 3];
+            m_memory.block[++PARAM_PTR] = m_memory.block[offset + 4];
+            m_memory.block[++PARAM_PTR] = type;
+        }
     }
     else
     {
         // global variable
         int offset = MEM_STATIC_START + idx * 5;
-        m_memory.block[++PARAM_PTR] = m_memory.block[offset + 4];
-        m_memory.block[++PARAM_PTR] = m_memory.block[offset + 3];
-        m_memory.block[++PARAM_PTR] = m_memory.block[offset + 2];
-        m_memory.block[++PARAM_PTR] = m_memory.block[offset + 1];
-        m_memory.block[++PARAM_PTR] = m_memory.block[offset + 0];
+        int type = m_memory.block[offset + 0];
+        if (PARAM_BOOL == type)
+        {
+            m_memory.block[++PARAM_PTR] = m_memory.block[offset + 1];
+            m_memory.block[++PARAM_PTR] = type;
+        }
+        else
+        {
+            m_memory.block[++PARAM_PTR] = m_memory.block[offset + 4];
+            m_memory.block[++PARAM_PTR] = m_memory.block[offset + 3];
+            m_memory.block[++PARAM_PTR] = m_memory.block[offset + 2];
+            m_memory.block[++PARAM_PTR] = m_memory.block[offset + 1];
+            m_memory.block[++PARAM_PTR] = type;
+        }
     }
     m_memory.param_cnt++;
 }
@@ -173,13 +191,16 @@ bool VM::PopParamBool()
 float VM::PopParamFloat()
 {
     m_memory.param_cnt--;
-    if (m_memory.block[PARAM_PTR--] != PARAM_FLOAT) Error("Popped unexpected type.");
+    int type = m_memory.block[PARAM_PTR--];
+    if (type != PARAM_FLOAT && type != PARAM_INT) Error("Popped unexpected type.");
     uint8_t* data = m_memory.block;
     int a = data[PARAM_PTR--];
     int b = data[PARAM_PTR--];
     int c = data[PARAM_PTR--];
     int d = data[PARAM_PTR--];
     int ival = (d << 24) | (c << 16) | (b << 8) | a;
+    if (type == PARAM_INT) return (float)ival;
+
     float fval;
     memcpy(&fval, &ival, 4);
     return fval;
@@ -188,15 +209,19 @@ float VM::PopParamFloat()
 int VM::PopParamInt()
 {
     m_memory.param_cnt--;
-    if (m_memory.block[PARAM_PTR--] != PARAM_INT) Error("Popped unexpected type.");
+    int type = m_memory.block[PARAM_PTR--];
+    if (type != PARAM_FLOAT && type != PARAM_INT) Error("Popped unexpected type.");
     uint8_t* data = m_memory.block;
     int a = data[PARAM_PTR--];
     int b = data[PARAM_PTR--];
     int c = data[PARAM_PTR--];
     int d = data[PARAM_PTR--];
+    int ival = (d << 24) | (c << 16) | (b << 8) | a;
+    if (type == PARAM_INT) return ival;
 
-    int ret = (d << 24) | (c << 16) | (b << 8) | a;
-    return ret;
+    float fval;
+    memcpy(&fval, &ival, 4);
+    return (int)fval;
 }
 
 std::string VM::PopParamString(int* addr_out /* = nullptr */)

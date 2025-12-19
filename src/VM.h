@@ -5,7 +5,7 @@
 #include "ErrorHandler.h"
 #include "Utilities.h"
 
-//#include <format>
+#include <raylib.h>
 #include <string>
 #include <functional>
 
@@ -28,8 +28,9 @@ public:
     VM(Environment* environment, ErrorHandler* errorHandler)
     {
         m_errorHandler = errorHandler;
-        //m_env = environment;
+        m_env = environment;
         LoadStdlib();
+        LoadRaylib();
         m_instance = this;
         m_memory.block = (uint8_t*)malloc(MEM_BLOCK_SZ);
     }
@@ -40,7 +41,6 @@ public:
     }
 
     static int GetFuncAddr(std::string name);
-    void LoadStdlib();
     void Execute(uint8_t* bytecode, size_t heap_addr, size_t entry_addr);
     
     static const int MEM_BLOCK_WIDTH = 128;
@@ -57,6 +57,9 @@ public:
     std::string Dump();
 
 private:
+
+    void LoadStdlib();
+    void LoadRaylib();
 
     static VM* m_instance;
 
@@ -160,6 +163,10 @@ private:
     
     void Error(const std::string& err);
 
+    // raylib support
+    Color StringToColor(const std::string& s);
+
+    Environment* m_env;
     ErrorHandler* m_errorHandler;
 
     struct func_s

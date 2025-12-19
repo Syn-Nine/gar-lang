@@ -171,6 +171,7 @@ void Assembler::ProcessIR(IRCode ircode)
         case TOKEN_PLUS:
         case TOKEN_SLASH:
         case TOKEN_STAR:
+        case TOKEN_PERCENT:
         case TOKEN_INV:
         case TOKEN_NEG:
         case TOKEN_AND:

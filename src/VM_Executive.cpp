@@ -50,6 +50,7 @@ void VM::Execute(uint8_t* bytecode, size_t heap_addr, size_t entry_addr)
         case TOKEN_PLUS: 
         case TOKEN_SLASH:
         case TOKEN_STAR:
+        case TOKEN_PERCENT:
             BinaryOp(inst);
             break;
         case TOKEN_CAST_FLOAT: ToFloat(); break;
@@ -124,6 +125,10 @@ void VM::Execute(uint8_t* bytecode, size_t heap_addr, size_t entry_addr)
                 printf("%d: List[%d]: @%d\n", cc, count, addr);
             }
             cc++;
+            if (cc > 1000) {
+                Error("Error printing parameter stack.");
+                return;
+            }
         }
     }
 
@@ -282,7 +287,14 @@ void VM::BinaryOp(TokenTypeEnum oper)
         else if (TOKEN_PLUS == oper) { tot = flhs + frhs; }
         else if (TOKEN_SLASH == oper) { tot = flhs / frhs; }
         else if (TOKEN_STAR == oper) { tot = flhs * frhs; }
+        else if (TOKEN_HAT == oper) { tot = powf(flhs, frhs); }
+        else
+        {
+            Error("Failed to perform binary operation.");
+            return;
+        }
         PushParamFloat(tot);
+        return;
     }
     else
     {
@@ -290,8 +302,19 @@ void VM::BinaryOp(TokenTypeEnum oper)
         if (TOKEN_MINUS == oper) { tot = ilhs - irhs; }
         else if (TOKEN_PLUS == oper) { tot = ilhs + irhs; }
         else if (TOKEN_STAR == oper) { tot = ilhs * irhs; }
+        else if (TOKEN_PERCENT == oper) { tot = ilhs % irhs; }
+        else if (TOKEN_HAT == oper) { tot = powf(flhs, frhs); }
+        else
+        {
+            Error("Failed to perform binary operation.");
+            return;
+        }
         PushParamInt(tot);
+        return;
     }
+
+    Error("Failed to perform binary operation.");
+    return;
 }
 
 
@@ -400,8 +423,8 @@ void VM::ComparisonOp(TokenTypeEnum oper)
         }
         switch (oper)
         {
-        case TOKEN_EQUAL_EQUAL: PushParamBool(flhs == frhs); break;
-        case TOKEN_BANG_EQUAL: PushParamBool(flhs != frhs); break;
+        case TOKEN_EQUAL_EQUAL: PushParamBool(blhs == brhs); break;
+        case TOKEN_BANG_EQUAL: PushParamBool(blhs != brhs); break;
         default:
             Error("Invalid comparison for bool types.");
             return;
