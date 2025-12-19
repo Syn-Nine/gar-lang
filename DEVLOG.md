@@ -140,8 +140,41 @@ Screenshot of rock-paper-scissors:
 ![t+25h rock-paper-scissors](https://github.com/Syn-Nine/gar-lang/blob/T+25h/images/t+25h_rps.png?raw=true)
 
 ## T+32h: First Major Refactor
-In this update I broke apart the Assembler from the VM and refactored the Stdlib interface to make it more scalable. I removed the forth-like return stack and moved stratch memory allocation to the call stack. As part of the progress toward having functions with local variables, I added a globals variable block and an alloca instruction with variable hoisting to allocate space on the call stack with a moveable frame pointer. I've added a pointer to keep track of the start and of basic blocks so that temporary data inside a basic block scope can be freed by unwinding the pointer at the end of the block. I also started some prep work for an enum type that will be an auto incremented integer at compile time.
+In this update I broke apart the Assembler from the VM and refactored the Stdlib interface to make it more scalable. I removed the forth-like return stack and moved stratch memory allocation to the call stack. As part of the progress toward having functions with local variables, I added a globals variable block and an alloca instruction with variable hoisting to allocate space on the call stack with a moveable frame pointer. I've added a pointer to keep track of the start of basic blocks so that temporary data inside a basic block scope can be freed by unwinding the pointer at the end of the block. I also started some prep work for an enum type that will be an auto incremented integer at compile time.
 
 
+## T+43h: Enums, Lists, Functions, Tic-Tac-Toe
+This update finished the work to support enums which are values in the form of :NAME. These values get pre-processed by the compiler into unique integer values through the Environment class. I also added constants, which is just a flag in the environment variable definitions to prevent overwriting except during declaration.
 
+I removed scratch data from the frame stack and put into scratchpad ring buffer. This basically reverted a bunch of work that I did in the previous update which is unfortunate, but ended up much better overall. This removed the need to keep track of blocks and unwinding the frame pointer if you break/continue in a loop.
+
+I learned about the pad ring buffer from Madgarden. It's an allocated block of memory that temporary allocations can live even as you move around through scope blocks and function jumps. This provides a small timeline where a temporary string or list can be created, passed around, and operated on. However, since it's a ring buffer that data will get overwritten soon so it's best to use it immediately. When something is stored in scratch a calculation is performed to determine if the scratch pointer + number of bytes needed will go past the end of the buffer, if so, the storage location is set to the start of the buffer to prevent having to add wrapping logic during reading and writing.
+
+Because of this limited lifetime it was time to create a heap and a new() statement to move things out of scratch to the heap. For now data gets allocated on the heap in a stack and there is no delete() keyword. This is mainly for time since the jam is only 7 days, but it's also a good motivator to do your allocations early in the code execution. When using the new() keyword on a list or string, the contents will be deeply copied to the heap. This way if you have a list with lists or strings inside it they will make the jump as well. The scratch pad, heap, and call frame stack make up the final portion of the VM's memory block. I'll be adding an architecture section with pictures below before the jam is over. 
+
+List operations use the new assembly tokens "load@" and "save@". Lists on the parameter stack store an int32 with the address of the data. At this address is an int16 length, followed by 5 byte values so that lists can hold any type, including other lists. A new assembly token "makelist" is used to unpack a certain quantity of values from the parameter stack and place them onto the scratchpad.
+
+Screenshot of makelist in action:
+
+![t+43h makelist in action](https://github.com/Syn-Nine/gar-lang/blob/T+43h/images/t+43h_makelist.png?raw=true)
+
+To access a list the address is unpacked and placed on the parameter stack, then square brackets are used to identify where you want to load from or save to. The contents of the bracket get evaluated and pushed to the parameter stack, then "load@" and "save@" pop those two values to calculate the address and offset that will be used. "load@" works just like the other loads and puts the contents to the parameter stack. If the target is another list, then the value added to the parameter stack is the address that list points to, which allows brackets to be chained.
+
+Screenshot of list index chaining:
+
+![t+43h list index chaining](https://github.com/Syn-Nine/gar-lang/blob/T+43h/images/t+43h_loadat.png?raw=true)
+
+
+This update also added Functions. During code generation, alloca and store statements reserve room on the frame stack for the incoming parameters and pop the parameter stack values into these variables. Addresses for the variables use negative numbers to differentiate them from addresses that point to the scratchpad or heap during lookup. A new "calldef" assembly token was created to differentiate jumps to user defined functions vs stdlib functions which use "call". The "calldef" token is followed by an int16 with the instruction address to jump to, whereas "call" is an index in the stdlib callback function vector. Returning a value from a function is as simple as having the last statement be an expression that results in a value being placed on the parameter stack.
+
+Screenshot of function definition with return value:
+
+![t+43h function definition with return value](https://github.com/Syn-Nine/gar-lang/blob/T+43h/images/t+43h_func.png?raw=true)
+
+At this point the required features were in to support a Tic-Tac-Toe text game ([gar source code](https://github.com/Syn-Nine/gar-lang/blob/T+43h/games/tictactoe.g?raw=true)). The repo has all the games in the games/ folder.
+
+
+Screenshot of Tic-Tac-Toe:
+
+![t+43h tic-tac-toe](https://github.com/Syn-Nine/gar-lang/blob/T+43h/images/t+43h_tictactoe.png?raw=true)
 

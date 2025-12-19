@@ -2,11 +2,12 @@
 
 std::map<TokenTypeEnum, std::string> Token::m_token2lex;
 std::map<std::string, TokenTypeEnum> Token::m_lex2token;
+std::map<std::string, TokenTypeEnum> Token::m_keywords;
 
 
 std::map<std::string, TokenTypeEnum> Token::GetKeywords()
 {
-    return m_lex2token;
+    return m_keywords;
 }
 
 void Token::Initialize()
@@ -69,27 +70,28 @@ void Token::Initialize()
     */
     
     // keywords
-    MapTokenLex(TOKEN_TRUE, "true");
-    MapTokenLex(TOKEN_FALSE, "false");
+    MapTokenLex(TOKEN_TRUE, "true", true);
+    MapTokenLex(TOKEN_FALSE, "false", true);
     //
-    MapTokenLex(TOKEN_PI, "pi");
+    MapTokenLex(TOKEN_PI, "pi", true);
     //
-    MapTokenLex(TOKEN_AS, "as");
-    MapTokenLex(TOKEN_BREAK, "break");
-    MapTokenLex(TOKEN_CONTINUE, "continue");
-    MapTokenLex(TOKEN_CONST, "const");
-    MapTokenLex(TOKEN_FOR, "for");
-    MapTokenLex(TOKEN_IF, "if");
-    MapTokenLex(TOKEN_IN, "in");
-    MapTokenLex(TOKEN_ELSE, "else");
-    MapTokenLex(TOKEN_LOOP, "loop");
-    MapTokenLex(TOKEN_PRINT, "print");
-    MapTokenLex(TOKEN_PRINTLN, "println");
-    MapTokenLex(TOKEN_VAR, "var");
-    MapTokenLex(TOKEN_VAR_INT, "int");
-    MapTokenLex(TOKEN_VAR_FLOAT, "float");
-    MapTokenLex(TOKEN_VAR_STRING, "string");
-    MapTokenLex(TOKEN_WHILE, "while");
+    MapTokenLex(TOKEN_AS, "as", true);
+    MapTokenLex(TOKEN_BREAK, "break", true);
+    MapTokenLex(TOKEN_CONTINUE, "continue", true);
+    MapTokenLex(TOKEN_CONST, "const", true);
+    MapTokenLex(TOKEN_DEF, "def", true);
+    MapTokenLex(TOKEN_FOR, "for", true);
+    MapTokenLex(TOKEN_IF, "if", true);
+    MapTokenLex(TOKEN_IN, "in", true);
+    MapTokenLex(TOKEN_ELSE, "else", true);
+    MapTokenLex(TOKEN_LOOP, "loop", true);
+    MapTokenLex(TOKEN_PRINT, "print", true);
+    MapTokenLex(TOKEN_PRINTLN, "println", true);
+    MapTokenLex(TOKEN_VAR, "var", true);
+    MapTokenLex(TOKEN_VAR_INT, "int", true);
+    MapTokenLex(TOKEN_VAR_FLOAT, "float", true);
+    MapTokenLex(TOKEN_VAR_STRING, "string", true);
+    MapTokenLex(TOKEN_WHILE, "while", true);
 
     /*
     MapTokenLex(TOKEN_ABS, "abs");
@@ -149,23 +151,26 @@ void Token::Initialize()
 
     // low level language tokens
     MapTokenLex(TOKEN_ALLOCA, "alloca");
-    MapTokenLex(TOKEN_BLOCK_START, "blockstart");
-    MapTokenLex(TOKEN_BLOCK_END, "blockend");
     MapTokenLex(TOKEN_CALL, "call");
+    MapTokenLex(TOKEN_CALL_DEF, "calldef");
     MapTokenLex(TOKEN_CAST_FLOAT, "castf");
     MapTokenLex(TOKEN_CAST_INT, "casti");
     MapTokenLex(TOKEN_CAST_STRING, "caststr");
     MapTokenLex(TOKEN_INV, "inv");
     MapTokenLex(TOKEN_JMP, "jmp");
     MapTokenLex(TOKEN_LABEL, "label");
+    MapTokenLex(TOKEN_LOAD_AT, "load@");
     MapTokenLex(TOKEN_LOAD_BOOL, "loadb");
     MapTokenLex(TOKEN_LOAD_FLOAT, "loadf");
     MapTokenLex(TOKEN_LOAD_INT, "loadi");
     MapTokenLex(TOKEN_LOAD_VAR, "loadvar");
     MapTokenLex(TOKEN_LOAD_STRING, "loadstr");
+    MapTokenLex(TOKEN_MAKE_LIST, "makelist");
     MapTokenLex(TOKEN_NEG, "neg");
+    MapTokenLex(TOKEN_STORE_AT, "store@");
     MapTokenLex(TOKEN_STORE_VAR, "storevar");
     MapTokenLex(TOKEN_PRINT_BLANK, "prntblank");
+    MapTokenLex(TOKEN_RET, "ret");
     
 
     MapTokenLex(TOKEN_NOOP, "noop");
@@ -188,10 +193,11 @@ void Token::Initialize()
 }
 
 
-void Token::MapTokenLex(TokenTypeEnum token, std::string lex)
+void Token::MapTokenLex(TokenTypeEnum token, std::string lex, bool is_keyword /* = false */)
 {
     m_token2lex.insert(std::make_pair(token, lex));
     m_lex2token.insert(std::make_pair(lex, token));
+    if (is_keyword) m_keywords.insert(std::make_pair(lex, token));
 }
 
 

@@ -25,11 +25,12 @@ IRCode Expr::AsExpr(IRCode lhs, Token oper)
 
 
 //-----------------------------------------------------------------------------
-IRCode Expr::AssignExpr(Token id, IRCode rhs, Environment* env)
+IRCode Expr::AssignExpr(Token id, IRCode rhs, Environment* env, bool allow_const /* = false */)
 {
+    size_t addr = env->GetVariable(id, allow_const);
+    
     IRCode ret = rhs;
     Compiler::Push(ret, Token(TOKEN_STORE_VAR, id.Line(), id.Filename()));
-    size_t addr = env->GetVariable(id);
     Compiler::Push(ret, Token(TOKEN_INTEGER, "%" + id.Lexeme(), addr, addr, id.Line(), id.Filename()));
     Compiler::PushLn(ret);
     return ret;
@@ -59,7 +60,18 @@ IRCode Expr::CallExpr(IRCode params, Token callee)
 
 
 //-----------------------------------------------------------------------------
-IRCode Expr::LiteralExpr(Token prev)
+IRCode Expr::ListExpr(IRCode params, Token count)
+{
+    IRCode ret = params;
+    Compiler::Push(ret, Token(TOKEN_MAKE_LIST, count.Line(), count.Filename()));
+    Compiler::Push(ret, count);
+    Compiler::PushLn(ret);
+    return ret;
+}
+
+
+//-----------------------------------------------------------------------------
+IRCode Expr::LiteralExpr(Token prev, Environment* env)
 {
     IRCode ret;
     TokenTypeEnum type = prev.GetType();
@@ -69,6 +81,12 @@ IRCode Expr::LiteralExpr(Token prev)
     }
     else if (TOKEN_INTEGER == type)
     {
+        Compiler::Push(ret, Token(TOKEN_LOAD_INT, prev.Line(), prev.Filename()));
+    }
+    else if (TOKEN_ENUM == type)
+    {
+        int val = env->GetEnumValue(prev.Lexeme());
+        prev = Token(TOKEN_INTEGER, std::to_string(val), val, val, prev.Line(), prev.Filename());
         Compiler::Push(ret, Token(TOKEN_LOAD_INT, prev.Line(), prev.Filename()));
     }
     else if (TOKEN_FLOAT == type)
@@ -117,7 +135,7 @@ IRCode Expr::VariableExpr(Token id, Environment* env)
 {
     IRCode ret;
     Compiler::Push(ret, Token(TOKEN_LOAD_VAR, id.Line(), id.Filename()));
-    size_t addr = env->GetVariable(id);
+    size_t addr = env->GetVariable(id, true);
     Compiler::Push(ret, Token(TOKEN_INTEGER, "%" + id.Lexeme(), addr, addr, id.Line(), id.Filename()));
     Compiler::PushLn(ret);
     return ret;

@@ -74,6 +74,7 @@ enum TokenTypeEnum
     TOKEN_BREAK,
     TOKEN_CONTINUE,
     TOKEN_CONST,
+    TOKEN_DEF,
     TOKEN_FOR,
     TOKEN_IF,
     TOKEN_IN,
@@ -132,23 +133,26 @@ enum TokenTypeEnum
     // low level language tokens
     // ------------------------------------------------------------------------
     TOKEN_ALLOCA,
-    TOKEN_BLOCK_START,
-    TOKEN_BLOCK_END,
     TOKEN_CALL,
+    TOKEN_CALL_DEF,
     TOKEN_CAST_FLOAT,
     TOKEN_CAST_INT,
     TOKEN_CAST_STRING,
     TOKEN_INV,
     TOKEN_JMP,
     TOKEN_LABEL,
+    TOKEN_LOAD_AT,
     TOKEN_LOAD_BOOL,
     TOKEN_LOAD_FLOAT,
     TOKEN_LOAD_INT,
     TOKEN_LOAD_VAR,
     TOKEN_LOAD_STRING,
+    TOKEN_MAKE_LIST,
     TOKEN_NEG,
+    TOKEN_STORE_AT,
     TOKEN_STORE_VAR,
     TOKEN_PRINT_BLANK,
+    TOKEN_RET,
 
 
     TOKEN_NOOP,
@@ -169,6 +173,8 @@ public:
         m_lexeme = m_token2lex[type];
         m_line = line;
         m_filename = filename;
+        m_doubleValue = 0.0;
+        m_intValue = 0;
     }
     
     Token(TokenTypeEnum type, std::string lexeme, int line, std::string filename)
@@ -177,6 +183,8 @@ public:
         m_lexeme = lexeme;
         m_line = line;
         m_filename = filename;
+        m_doubleValue = 0.0;
+        m_intValue = 0;
     }
 
     Token(TokenTypeEnum type, std::string lexeme, std::string value, int line, std::string filename)
@@ -186,6 +194,8 @@ public:
         m_stringValue = value;
         m_line = line;
         m_filename = filename;
+        m_doubleValue = 0.0;
+        m_intValue = 0;
     }
 
     Token(TokenTypeEnum type, std::string lexeme, int32_t ival, double dval, int line, std::string filename)
@@ -217,7 +227,7 @@ public:
 
 private:
 
-    static void MapTokenLex(TokenTypeEnum token, std::string lex);
+    static void MapTokenLex(TokenTypeEnum token, std::string lex, bool is_keyword = false);
 
 
     TokenTypeEnum m_type;
@@ -230,6 +240,7 @@ private:
 
     static std::map<TokenTypeEnum, std::string> m_token2lex;
     static std::map<std::string, TokenTypeEnum> m_lex2token;
+    static std::map<std::string, TokenTypeEnum> m_keywords;
 };
 
 typedef std::vector<Token> TokenList;
