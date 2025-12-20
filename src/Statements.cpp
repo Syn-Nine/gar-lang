@@ -92,6 +92,15 @@ IRCode Stmt::PrintStmt(IRCode expr, Token oper)
 
 
 //-----------------------------------------------------------------------------
+IRCode Stmt::ReturnStmt(Token oper)
+{
+    IRCode ret;
+    Compiler::Push(ret, Token(TOKEN_RET, oper.Line(), oper.Filename()));
+    return ret;
+}
+
+
+//-----------------------------------------------------------------------------
 IRCode Stmt::VarStmt(Token oper, Environment* env, bool is_const /* = false */)
 {
     std::string lex = oper.Lexeme();

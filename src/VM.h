@@ -41,7 +41,7 @@ public:
     }
 
     static int GetFuncAddr(std::string name);
-    void Execute(uint8_t* bytecode, size_t heap_addr, size_t entry_addr);
+    void Execute(uint8_t* bytecode, size_t heap_addr, size_t entry_addr, bool debug);
     
     static const int MEM_BLOCK_WIDTH = 128;
     static const int MEM_BLOCK_HEIGHT = 960;
@@ -87,6 +87,8 @@ private:
     static const uint8_t PARAM_INT = 3;
     static const uint8_t PARAM_STRING = 4;
     static const uint8_t PARAM_LIST = 5;
+    //
+    static const uint8_t PARAM_RAY_TEXTURE = 6;
 
     // push, pop, peek, update
 
@@ -107,6 +109,11 @@ private:
     void PopParamVar(int idx);
     void PopParamAt(int addr, int at);
     int PopParamList();
+    
+    // raylib param
+    void PushParamRay(uint8_t type, int idx);
+    int PopParamRay(uint8_t type);
+
     
     // scratch pad
     int PushScratchList(int len);
@@ -165,6 +172,7 @@ private:
 
     // raylib support
     Color StringToColor(const std::string& s);
+    int StringToKey(const std::string& s);
 
     Environment* m_env;
     ErrorHandler* m_errorHandler;
@@ -179,6 +187,7 @@ private:
     std::vector<func_s> m_stdlib;
     std::map<std::string, size_t> m_stdlib_lookup;
     
+    std::vector<Texture2D*> m_ray_textures;
 };
 
 #endif // VM_H

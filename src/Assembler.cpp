@@ -95,6 +95,9 @@ uint8_t* Assembler::Assemble()
         ProcessIR(ftn.body);
     }
 
+    m_asm.append("\nmain:\n");
+    m_pp_labels.insert(std::make_pair("__main", m_inst_ptr));
+    
     // reserve memory for main entry locals
     auto locals = m_env->GetLocals("");
     for (auto& var : locals)
@@ -115,7 +118,6 @@ uint8_t* Assembler::Assemble()
         m_asm.append(row);
     }
 
-    m_asm.append("\nmain:\n");
     ProcessIR(m_ircode);
 
     // post process replace labels with addresses

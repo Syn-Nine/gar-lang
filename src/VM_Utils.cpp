@@ -81,6 +81,21 @@ void VM::PushParamInt(int val)
     m_memory.param_cnt++;
 }
 
+void VM::PushParamRay(uint8_t type, int idx)
+{
+    uint8_t a = idx & 0xFF; idx = idx >> 8;
+    uint8_t b = idx & 0xFF; idx = idx >> 8;
+    uint8_t c = idx & 0xFF; idx = idx >> 8;
+    uint8_t d = idx & 0xFF;
+
+    m_memory.block[++PARAM_PTR] = d;
+    m_memory.block[++PARAM_PTR] = c;
+    m_memory.block[++PARAM_PTR] = b;
+    m_memory.block[++PARAM_PTR] = a;
+    m_memory.block[++PARAM_PTR] = type;
+    m_memory.param_cnt++;
+}
+
 void VM::PushParamString(int addr)
 {
     uint8_t a = addr & 0xFF; addr = addr >> 8;
@@ -224,6 +239,19 @@ int VM::PopParamInt()
     return (int)fval;
 }
 
+int VM::PopParamRay(uint8_t type)
+{
+    m_memory.param_cnt--;
+    if (type != m_memory.block[PARAM_PTR--]) Error("Popped unexpected type.");
+    uint8_t* data = m_memory.block;
+    int a = data[PARAM_PTR--];
+    int b = data[PARAM_PTR--];
+    int c = data[PARAM_PTR--];
+    int d = data[PARAM_PTR--];
+    int ival = (d << 24) | (c << 16) | (b << 8) | a;
+    return ival;
+}
+
 std::string VM::PopParamString(int* addr_out /* = nullptr */)
 {
     m_memory.param_cnt--;
@@ -290,26 +318,33 @@ int VM::PopParamPointer()
 void VM::PopParamVar(int idx)
 {
     m_memory.param_cnt--;
-    
+    int type = m_memory.block[PARAM_PTR--];
+
     if (idx < 0)
     {
         // frame local variable
         int offset = FRAME_BASE_PTR + idx * 5;
-        m_memory.block[offset + 5] = m_memory.block[PARAM_PTR--];
         m_memory.block[offset + 4] = m_memory.block[PARAM_PTR--];
-        m_memory.block[offset + 3] = m_memory.block[PARAM_PTR--];
-        m_memory.block[offset + 2] = m_memory.block[PARAM_PTR--];
-        m_memory.block[offset + 1] = m_memory.block[PARAM_PTR--];
+        if (PARAM_BOOL != type)
+        {
+            m_memory.block[offset + 3] = m_memory.block[PARAM_PTR--];
+            m_memory.block[offset + 2] = m_memory.block[PARAM_PTR--];
+            m_memory.block[offset + 1] = m_memory.block[PARAM_PTR--];
+        }
+        m_memory.block[offset + 5] = type;
     }
     else
     {
         // global variable
         int offset = MEM_STATIC_START + idx * 5;
-        m_memory.block[offset + 0] = m_memory.block[PARAM_PTR--];
         m_memory.block[offset + 1] = m_memory.block[PARAM_PTR--];
-        m_memory.block[offset + 2] = m_memory.block[PARAM_PTR--];
-        m_memory.block[offset + 3] = m_memory.block[PARAM_PTR--];
-        m_memory.block[offset + 4] = m_memory.block[PARAM_PTR--];
+        if (PARAM_BOOL != type)
+        {
+            m_memory.block[offset + 2] = m_memory.block[PARAM_PTR--];
+            m_memory.block[offset + 3] = m_memory.block[PARAM_PTR--];
+            m_memory.block[offset + 4] = m_memory.block[PARAM_PTR--];
+        }
+        m_memory.block[offset + 0] = type;
     }
 }
 
