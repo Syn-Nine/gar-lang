@@ -188,3 +188,20 @@ GIF of Catfish Bouncer:
 
 ![t+47h catfish bouncer gif](https://github.com/Syn-Nine/odin-mini-games/raw/main/2d-games/catfish/screenshots/catfish.gif)
 
+## T+52h: Include, Return, More Raylib, Knots Game
+This update brings in the include statement, which injests a file and inserts the tokens in place immediately after the include statement. This works in a loop so that you can have nested includes. There is no namespacing in includes to save time. A return statement will now inject a RET bytecode to allow early return in a function. This also unwinds the function pointer. Returning a value works like regular function returns where you put the value on the parameter stack before the return statement. I also fixed some bugs, one with the main entry point instruction offset, and one with boolean varables pushing and popping from the parameter stack.
+
+The big goal for this update was to port over my "Knots" puzzle game from Rust. This required adding support for loading and drawing raylib textures. To do this I added an array in the VM that holds pointers to Texture2D raylib structures. The index in this array gets stored in a variable after you call ray::LoadTexture() and is then used to find the pointer when calling ray::DrawTexturePro(). Which means the data lives in the compiler's heap instead of the VM's heap, which was a shortcut for time.
+
+The language executable gar.exe now accepts two input parameters. You can specify the file to run, and alternatively add a -d flag before the filename to show the compiler, assembler, and stack output for debugging.
+
+Here's a couple screenshots showing the Knots game in action and what the final solution looks like. Also, [here is the game code](https://raw.githubusercontent.com/Syn-Nine/gar-lang/refs/heads/T%2B52h/games/knots.g).
+
+GIF of Knots Game:
+
+![t+52h knots gif](https://github.com/Syn-Nine/gar-lang/blob/T+52h/images/t+52_knots-1.gif?raw=true)
+
+Knots Solution:
+
+![t+52h knots solution](https://github.com/Syn-Nine/gar-lang/blob/T+52h/images/t+52_knots-solution.png?raw=true)
+

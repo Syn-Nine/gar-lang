@@ -8,6 +8,8 @@
 #include "Statements.h"
 #include "Environment.h"
 
+#include <set>
+#include <string>
 
 class Compiler
 {
@@ -29,8 +31,6 @@ public:
     {
         IRCode bc;
         
-        PushLabel(m_IRCode, "__main");
-        
         while (!IsAtEnd() && !m_errorHandler->HasErrors())
         {
             bc = Declaration();
@@ -46,6 +46,17 @@ public:
     //-----------------------------------------------------------------------------
     IRCode Declaration()
     {
+        bool keep_going = true;
+        while (keep_going)
+        {
+            keep_going = false;
+            if (Match(TOKEN_INCLUDE))
+            {
+                Include();
+                keep_going = true;
+            }
+        }
+
         if (Match(TOKEN_DEF)) return Function();
         if (Match(TOKEN_CONST)) return ConstDeclaration();
         if (Match(TOKEN_VAR)) return VarDeclaration();
@@ -187,6 +198,7 @@ public:
         if (Match(TOKEN_IF)) return IfStatement();
         if (Match(TOKEN_LOOP)) return LoopStatement();
         if (MatchVar(2, TOKEN_PRINT, TOKEN_PRINTLN)) return PrintStatement();
+        if (Match(TOKEN_RETURN)) return Stmt::ReturnStmt(Previous());
         if (Match(TOKEN_WHILE)) return WhileStatement();
 
         return ExpressionStatement();
@@ -697,7 +709,7 @@ private:
     TokenList m_tokenList;
     TokenList m_IRCode;
     int m_current;
-    
+    std::set<std::string> m_includes;
 };
 
 

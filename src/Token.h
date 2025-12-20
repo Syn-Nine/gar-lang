@@ -29,10 +29,6 @@ enum TokenTypeEnum
     TOKEN_LEFT_BRACKET,
     TOKEN_RIGHT_BRACKET,
 
-    /*
-    TOKEN_SEMI_COLON,
-    TOKEN_APOSTROPHE,
-    */
 
     // two character tokens
     TOKEN_BANG_EQUAL,
@@ -45,17 +41,6 @@ enum TokenTypeEnum
     TOKEN_AND,
     TOKEN_DOT_DOT,
     TOKEN_DOT_DOT_EQUAL,
-
-    /*TOKEN_AT,
-    TOKEN_AT_AT,
-    TOKEN_BANG_BANG,
-    TOKEN_EM_DASH,
-    TOKEN_HAT_BANG,
-    TOKEN_MINUS_BANG,
-    TOKEN_PLUS_BANG,
-    TOKEN_SLASH_BANG,
-    TOKEN_STAR_BANG,
-    */
 
 
     // literals
@@ -80,55 +65,17 @@ enum TokenTypeEnum
     TOKEN_IN,
     TOKEN_ELSE,
     TOKEN_FILELINE,
+    TOKEN_INCLUDE,
     TOKEN_LOOP,
     TOKEN_PRINT,
     TOKEN_PRINTLN,
+    TOKEN_RETURN,
     TOKEN_VAR,
     TOKEN_VAR_INT,
     TOKEN_VAR_FLOAT,
     TOKEN_VAR_STRING,
     TOKEN_WHILE,
-    /*
-    TOKEN_ABS,
-    TOKEN_ASSERT,
-    TOKEN_CALL,
-    TOKEN_ENUM,
-    TOKEN_INCLUDE,
-    TOKEN_INPUT,
-    TOKEN_MAX,
-    TOKEN_MIN,
-    TOKEN_NEG,
-    TOKEN_NOOP,
-    TOKEN_RAND,
-    TOKEN_RAND_RANGE,
-    TOKEN_RETURN,
-    TOKEN_SRAND,
-    TOKEN_TOCHAR,
-    //
-    TOKEN_DEG2RAD,
-    TOKEN_RAD2DEG,
-    TOKEN_SIN,
-    TOKEN_COS,
-    TOKEN_TAN,
-    TOKEN_ASIN,
-    TOKEN_ACOS,
-    TOKEN_ATAN,
-    TOKEN_ATAN2,
-    //
-    TOKEN_CEIL,
-    TOKEN_CLAMP,
-    TOKEN_EXP,
-    TOKEN_FLOOR,
-    TOKEN_FRACT,
-    TOKEN_LOG,
-    TOKEN_LOG10,
-    TOKEN_MIX,
-    TOKEN_POW,
-    TOKEN_ROUND,
-    TOKEN_SQRT,
-    TOKEN_SGN,
-    //
-    */
+    
 
     // low level language tokens
     // ------------------------------------------------------------------------

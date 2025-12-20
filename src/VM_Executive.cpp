@@ -4,7 +4,7 @@
 
 VM* VM::m_instance = nullptr;
 
-void VM::Execute(uint8_t* bytecode, size_t heap_addr, size_t entry_addr)
+void VM::Execute(uint8_t* bytecode, size_t heap_addr, size_t entry_addr, bool debug)
 {
     // load bytecode into VM memory
     memcpy(m_memory.block, bytecode, MEM_BLOCK_SZ);
@@ -85,49 +85,57 @@ void VM::Execute(uint8_t* bytecode, size_t heap_addr, size_t entry_addr)
         if (quit) break;
     }
 
-    printf("\nParameter Stack:\n");
-    if (m_memory.block[PARAM_PTR] == PARAM_INVALID)
+    if (debug)
     {
-        printf("-- Empty\n");
-    }
-    else
-    {
-        int cc = 0;
-        while (PARAM_PTR > MEM_PARAM_START)
+        printf("\nParameter Stack:\n");
+        if (m_memory.block[PARAM_PTR] == PARAM_INVALID)
         {
-            uint8_t type = PeekParamType();
-            if (PARAM_BOOL == type)
+            printf("-- Empty\n");
+        }
+        else
+        {
+            int cc = 0;
+            while (PARAM_PTR > MEM_PARAM_START)
             {
-                bool val = PopParamBool();
-                if (val) { printf("%d: BOOL  : true\n", cc); }
-                else { printf("%d: BOOL  : false\n", cc); }
-            }
-            else if (PARAM_FLOAT == type)
-            {
-                float fval = PopParamFloat();
-                printf("%d: FLOAT : %f\n", cc, fval);
-            }
-            else if (PARAM_INT == type)
-            {
-                int val = PopParamInt();
-                printf("%d: INT   : %d\n", cc, val);
-            }
-            else if (PARAM_STRING == type)
-            {
-                int addr;
-                std::string str = PopParamString(&addr);
-                printf("%d: STRING: @%d=\"%s\"\n", cc, addr, str.c_str());
-            }
-            else if (PARAM_LIST == type)
-            {
-                int addr = PopParamList();
-                int count = PeekScratchInt16(addr);
-                printf("%d: List[%d]: @%d\n", cc, count, addr);
-            }
-            cc++;
-            if (cc > 1000) {
-                Error("Error printing parameter stack.");
-                return;
+                uint8_t type = PeekParamType();
+                if (PARAM_BOOL == type)
+                {
+                    bool val = PopParamBool();
+                    if (val) { printf("%d: BOOL  : true\n", cc); }
+                    else { printf("%d: BOOL  : false\n", cc); }
+                }
+                else if (PARAM_FLOAT == type)
+                {
+                    float fval = PopParamFloat();
+                    printf("%d: FLOAT : %f\n", cc, fval);
+                }
+                else if (PARAM_INT == type)
+                {
+                    int val = PopParamInt();
+                    printf("%d: INT   : %d\n", cc, val);
+                }
+                else if (PARAM_STRING == type)
+                {
+                    int addr;
+                    std::string str = PopParamString(&addr);
+                    printf("%d: STRING: @%d=\"%s\"\n", cc, addr, str.c_str());
+                }
+                else if (PARAM_LIST == type)
+                {
+                    int addr = PopParamList();
+                    int count = PeekScratchInt16(addr);
+                    printf("%d: List[%d]: @%d\n", cc, count, addr);
+                }
+                else
+                {
+                    printf("Unknown parameter type.\n");
+                    return;
+                }
+                cc++;
+                if (cc > 1000) {
+                    Error("Error printing parameter stack.");
+                    return;
+                }
             }
         }
     }

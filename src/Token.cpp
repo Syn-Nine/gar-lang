@@ -51,23 +51,6 @@ void Token::Initialize()
     MapTokenLex(TOKEN_ENUM, "");
 
 
-    /*
-    MapTokenLex(TOKEN_COLON, ":");
-    MapTokenLex(TOKEN_SEMI_COLON, ";");
-    MapTokenLex(TOKEN_APOSTROPHE, "'asdfasd'");
-    
-
-    MapTokenLex(TOKEN_AT, "@");
-    MapTokenLex(TOKEN_AT_AT, "@@");
-    MapTokenLex(TOKEN_BANG_BANG, "!!");
-    MapTokenLex(TOKEN_EM_DASH, "--");
-    MapTokenLex(TOKEN_HAT_BANG, "^!");
-    MapTokenLex(TOKEN_MINUS_BANG, "-!");
-    MapTokenLex(TOKEN_PLUS_BANG, "+!");
-    MapTokenLex(TOKEN_SLASH_BANG, "/!");
-    MapTokenLex(TOKEN_STAR_BANG, "*!");
-    
-    */
     
     // keywords
     MapTokenLex(TOKEN_TRUE, "true", true);
@@ -85,69 +68,17 @@ void Token::Initialize()
     MapTokenLex(TOKEN_IN, "in", true);
     MapTokenLex(TOKEN_ELSE, "else", true);
     MapTokenLex(TOKEN_FILELINE, "FILELINE", true);
+    MapTokenLex(TOKEN_INCLUDE, "include", true);
     MapTokenLex(TOKEN_LOOP, "loop", true);
     MapTokenLex(TOKEN_PRINT, "print", true);
     MapTokenLex(TOKEN_PRINTLN, "println", true);
+    MapTokenLex(TOKEN_RETURN, "return", true);
     MapTokenLex(TOKEN_VAR, "var", true);
     MapTokenLex(TOKEN_VAR_INT, "int", true);
     MapTokenLex(TOKEN_VAR_FLOAT, "float", true);
     MapTokenLex(TOKEN_VAR_STRING, "string", true);
     MapTokenLex(TOKEN_WHILE, "while", true);
 
-    /*
-    MapTokenLex(TOKEN_ABS, "abs");
-    MapTokenLex(TOKEN_ASSERT, "assert");
-    MapTokenLex(TOKEN_AS_FLOAT, "asfloat");
-    MapTokenLex(TOKEN_AS_INT, "asint");
-    MapTokenLex(TOKEN_CALL, "call");
-    MapTokenLex(TOKEN_ENUM, "enum");
-    MapTokenLex(TOKEN_FILELINE, "FILELINE");
-    MapTokenLex(TOKEN_INCLUDE, "include");
-    MapTokenLex(TOKEN_INPUT, "input");
-    MapTokenLex(TOKEN_MAX, "max");
-    MapTokenLex(TOKEN_MIN, "min");
-    MapTokenLex(TOKEN_NEG, "neg");
-    MapTokenLex(TOKEN_NOOP, "noop");
-    MapTokenLex(TOKEN_RAND, "rand");
-    MapTokenLex(TOKEN_RAND_RANGE, "randrange");
-    MapTokenLex(TOKEN_RETURN, "return");
-    MapTokenLex(TOKEN_SRAND, "srand");
-    MapTokenLex(TOKEN_TOCHAR, "tochar");
-    //
-    MapTokenLex(TOKEN_PI, "pi");
-    MapTokenLex(TOKEN_DEG2RAD, "deg2rad");
-    MapTokenLex(TOKEN_RAD2DEG, "rad2deg");
-    MapTokenLex(TOKEN_SIN, "sin");
-    MapTokenLex(TOKEN_COS, "cos");
-    MapTokenLex(TOKEN_TAN, "tan");
-    MapTokenLex(TOKEN_ASIN, "asin");
-    MapTokenLex(TOKEN_ACOS, "acos");
-    MapTokenLex(TOKEN_ATAN, "atan");
-    MapTokenLex(TOKEN_ATAN2, "atan2");
-    //
-    MapTokenLex(TOKEN_CEIL, "ceil");
-    MapTokenLex(TOKEN_CLAMP, "clamp");
-    MapTokenLex(TOKEN_EXP, "exp");
-    MapTokenLex(TOKEN_FLOOR, "floor");
-    MapTokenLex(TOKEN_FRACT, "fract");
-    MapTokenLex(TOKEN_LOG, "log");
-    MapTokenLex(TOKEN_LOG10, "log10");
-    MapTokenLex(TOKEN_MIX, "mix");
-    MapTokenLex(TOKEN_POW, "pow");
-    MapTokenLex(TOKEN_ROUND, "round");
-    MapTokenLex(TOKEN_SQRT, "sqrt");
-    MapTokenLex(TOKEN_SGN, "sgn");
-    //
-    MapTokenLex(TOKEN_CONST, "const");
-    MapTokenLex(TOKEN_DIM, "dim");
-    MapTokenLex(TOKEN_ERASE, "erase");
-    MapTokenLex(TOKEN_FILL, "fill");
-    MapTokenLex(TOKEN_LEN, "len");
-    MapTokenLex(TOKEN_REDIM, "redim");
-    MapTokenLex(TOKEN_VAR, "var");
-    //
-    */
-    
 
 
     // low level language tokens

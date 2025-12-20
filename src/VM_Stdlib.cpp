@@ -90,6 +90,12 @@ void VM::LoadStdlib()
         }
     );
 
+    RegisterFunc("%sqrt", 1, [this]() {
+        float in0 = PopParamFloat();
+        PushParamFloat(sqrt(in0));
+        }
+    );
+
     RegisterFunc("%rand", 0, [this]() {
         float ret = __rand_impl();
         PushParamFloat(ret);

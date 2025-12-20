@@ -11,30 +11,27 @@
 #include "Assembler.h"
 #include "VM.h"
 
-int main()
+void RunFile(std::string filename, bool debug)
 {
-    const char* filename = "unit_test.g";
-    char* code = LoadFileText(filename);
+    char* code = LoadFileText(filename.c_str());
     if (!code) {
         printf("Failed to open source: %s\n", filename);
-        std::getchar();
-        return 0;
+        return;
     }
 
     ErrorHandler* errorHandler = new ErrorHandler();
     Token::Initialize();
 
-    Scanner* scanner = new Scanner(code, errorHandler, filename, 1);
+    Scanner* scanner = new Scanner(code, errorHandler, filename.c_str(), 1);
     TokenList tokens = scanner->ScanTokens();
     if (errorHandler->HasErrors()) {
         printf("Scanner Error:\n");
         errorHandler->Print();
-        std::getchar();
-        return 0;
+        return;
     }
 
     //printf("%s:\n%s\n\n", filename, Token::Dump(tokens).c_str());
-    printf("Input:\n%s\n\n", code);
+    if (debug) printf("Input:\n%s\n\n", code);
 
     Environment* env = Environment::Push();
     Compiler* compiler = new Compiler(tokens, env, errorHandler);
@@ -42,30 +39,27 @@ int main()
     if (errorHandler->HasErrors()) {
         printf("Compiler Error:\n");
         errorHandler->Print();
-        std::getchar();
-        return 0;
+        return;
     }
     env = Environment::Pop();
-    
+
     //printf("Compiler Output:\n%s\n\n", Token::Dump(ir).c_str());
     VM* vm = new VM(env, errorHandler);
 
     Assembler* assembler = new Assembler(ir, env, errorHandler);
     uint8_t* bytecode = assembler->Assemble();
-    printf("Assembler Output:\n%s\n", assembler->Dump().c_str());
+    if (debug) printf("Assembler Output:\n%s\n", assembler->Dump().c_str());
     if (errorHandler->HasErrors()) {
         printf("Assembler Error:\n");
         errorHandler->Print();
-        std::getchar();
-        return 0;
+        return;
     }
 
-    vm->Execute(bytecode, assembler->GetHeapAddr(), assembler->GetEntryAddr());
+    vm->Execute(bytecode, assembler->GetHeapAddr(), assembler->GetEntryAddr(), debug);
     if (errorHandler->HasErrors()) {
         printf("Runtime Error:\n");
         errorHandler->Print();
-        std::getchar();
-        return 0;
+        return;
     }
 
     delete vm;
@@ -75,7 +69,42 @@ int main()
     delete errorHandler;
 
 
-    std::getchar();
+}
+
+int main(int nargs, char* argsv[])
+{
+    std::string filename;
+    bool debug = false;
+
+    if (1 == nargs)
+    {
+        std::ifstream f;
+        f.open("autoplay.g", std::ios::in | std::ios::binary | std::ios::ate);
+        if (f.is_open())
+        {
+            filename = "autoplay.g";
+        }
+        else
+        {
+            printf("Failed to open autoplay.g\n");
+            return 0;
+        }
+    }
+    else if (2 == nargs)
+    {
+        filename = argsv[1];
+        printf("Run File: %s\n", filename.c_str());
+    }
+    else if (3 == nargs)
+    {
+        filename = argsv[2];
+        if (0 == std::string(argsv[1]).compare("-d")) debug = true;
+        printf("Run File: %s\n", filename.c_str());
+    }
+
+    RunFile(filename, debug);
+
+    //std::getchar();
 
     return 0;
 }
