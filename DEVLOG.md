@@ -195,12 +195,13 @@ The big goal for this update was to port over my "Knots" puzzle game from Rust. 
 
 The language executable gar.exe now accepts two input parameters. You can specify the file to run, and alternatively add a -d flag before the filename to show the compiler, assembler, and stack output for debugging.
 
-Here's a couple screenshots showing the Knots game in action and what the final solution looks like. Also, [here is the game code](https://github.com/Syn-Nine/gar-lang/blob/T+52h/games/knots.g?raw=true).
+Here's a couple screenshots showing the Knots game in action and what the final solution looks like. Also, [here is the game code](https://raw.githubusercontent.com/Syn-Nine/gar-lang/refs/heads/T%2B52h/games/knots.g).
 
 GIF of Knots Game:
 
-![t+52h knots gif](https://github.com/Syn-Nine/gar-lang/blob/T+52h/images/t+52_knots-1.png?raw=true)
+![t+52h knots gif](https://github.com/Syn-Nine/gar-lang/blob/T+52h/images/t+52_knots-1.gif?raw=true)
 
 Knots Solution:
 
 ![t+52h knots solution](https://github.com/Syn-Nine/gar-lang/blob/T+52h/images/t+52_knots-solution.png?raw=true)
+
