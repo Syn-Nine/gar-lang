@@ -5,6 +5,8 @@ This project is for [Langjam Gamejam 2025](https://langjamgamejam.com/) where yo
 
 Usage: gar.exe [-d] [filename]
 
+See [DEVLOG](https://github.com/Syn-Nine/gar-lang/blob/main/DEVLOG.md) and [ARCHITECTURE](https://github.com/Syn-Nine/gar-lang/blob/main/ARCHITECTURE.md) for more information about how this was made.
+
 This repository includes 5 games that were ported to the language during the jam including a short 2D puzzle game, Knots:
 
 GIF of Knots Game:
