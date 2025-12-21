@@ -1,3 +1,10 @@
+# Gar Devlog
+
+## TL;DR
+
+This repo is for a language, compiler, assembler, VM, and 5 games that I made for the Langjam Gamejam 2025 challenge, including a 2d viking/norse knot puzzle game. This document describes my thought process along the way at hour markers that align with branches in the repo. Details about the final architecture and code can be found in the ARCHITECTURE.md file. Thanks for reading!
+
+
 ## T+3h: Scope
 This project is for [Langjam Gamejam 2025](https://langjamgamejam.com/) where you program a custom language and make a game in that language in 7 days. Due to work/school commitments I started the weekend before and am logging my hours here to keep with the spirit of the jam. I'm also planning to create branches at hour milestones to keep track of what the code looked like along the way.
 
