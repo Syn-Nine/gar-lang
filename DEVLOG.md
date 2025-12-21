@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-This repo is for a language, compiler, assembler, VM, and 5 games that I made for the Langjam Gamejam 2025 challenge, including a 2d viking/norse knot puzzle game. This document describes my thought process along the way at hour markers that align with branches in the repo. Details about the final architecture and code can be found in the [ARCHITECTURE](https://github.com/Syn-Nine/gar-lang/blob/main/ARCHITECTURE.md) file. Thanks for reading!
+This repo is for a language, compiler, assembler, VM, and 5 games that I made for the Langjam Gamejam 2025 challenge in 52 dev hours, including porting my 2d viking/norse knot puzzle game over from Rust. This document describes my thought process along the way at hour markers that align with branches in the repo. Details about the final architecture and code can be found in the [ARCHITECTURE](https://github.com/Syn-Nine/gar-lang/blob/main/ARCHITECTURE.md) file. Thanks for reading!
 
 Knots Game ([code](https://raw.githubusercontent.com/Syn-Nine/gar-lang/refs/heads/T%2B52h/games/knots.g)):
 
@@ -214,5 +214,6 @@ GIF of Knots Game:
 Knots Solution:
 
 ![t+52h knots solution](https://github.com/Syn-Nine/gar-lang/blob/T+52h/images/t+52_knots-solution.png?raw=true)
+
 
 
