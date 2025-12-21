@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes how the organization and functionality of the Gar language repo.
+This document describes the organization and functionality of the Gar language repo.
 
 ## Files
 
@@ -63,3 +63,4 @@ The instruction block is at the beginning of the memory block. Data stored in th
 ![VM memory block](https://github.com/Syn-Nine/gar-lang/blob/main/images/memory.png?raw=true)
 
 That's it, thanks for reading!
+
