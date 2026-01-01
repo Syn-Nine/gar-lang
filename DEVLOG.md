@@ -13,7 +13,7 @@ This project is for [Langjam Gamejam 2025](https://langjamgamejam.com/) where yo
 
 First things first, I need to come up with a plan of attack, primarily high level scoping decisions that have large impact on success and schedule.
 
-Microsoft recently announced they're embedding AI into Windows so I finally made the jump to Linux (Mint on Beeline SER8). However, I'm not proficient in debugging on Linux yet so I'll unfortunately be working in C++ using MSVC.
+Microsoft recently announced they're embedding AI into Windows so I finally made the jump to Linux (Mint on Beelink SER8). However, I'm not proficient in debugging on Linux yet so I'll unfortunately be working in C++ using MSVC.
 
 I think it'd be fun to revisit an old project of mine where I embedded bytecode instructions into a texture and processed them on a shader. I'd ultimately like for this to run in a VM on a compute shader, but I'll start with compiling to an intermediate representation and then assembling to bytecode and running in a VM on the CPU. 
 
@@ -214,6 +214,7 @@ GIF of Knots Game:
 Knots Solution:
 
 ![t+52h knots solution](https://github.com/Syn-Nine/gar-lang/blob/T+52h/images/t+52_knots-solution.png?raw=true)
+
 
 
 
